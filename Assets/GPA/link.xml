@@ -1,0 +1,16 @@
+<!-- Keeps GPA code that is only found by reflection (callout types, providers, JSON models) when
+     code stripping removes "unused" code (iOS IL2CPP and the PC Mono build both strip). -->
+<linker>
+  <assembly fullname="GPA.Core" preserve="all"/>
+  <assembly fullname="GPA.Callouts" preserve="all"/>
+  <assembly fullname="GPA.Records" preserve="all"/>
+  <assembly fullname="GPA.TopDown2D" preserve="all"/>
+  <assembly fullname="GPA.Game" preserve="all"/>
+  <assembly fullname="GPA.Radio" preserve="all"/>
+  <assembly fullname="GPA.MDT" preserve="all"/>
+  <assembly fullname="GPA.Police" preserve="all"/>
+  <assembly fullname="GPA.Minimap" preserve="all"/>
+  <assembly fullname="GPA.Vehicles" preserve="all"/>
+  <assembly fullname="GPA.Input" preserve="all"/>
+  <assembly fullname="GPA.HUD" preserve="all"/>
+</linker>

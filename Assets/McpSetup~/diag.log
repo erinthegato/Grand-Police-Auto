@@ -1,0 +1,63 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261118060840
+Username: MININT-O8NMA5O\joshy
+RunAs User: MININT-O8NMA5O\joshy
+Configuration Name: 
+Machine: MININT-O8NMA5O (Microsoft Windows NT 10.0.19045.0)
+Host Application: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/Users/joshy/Grand Police Auto/Assets\McpSetup~\diag.ps1
+Process ID: 42760
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+== unity mcp configure --list ==
+
+Supported MCP clients:
+
+  claude             Claude Desktop                 C:\Users\joshy\AppData\Roaming\Claude\claude_desktop_config.json  Γ£ô configured
+  claude-code        Claude Code CLI                  (no file ΓÇö delegation/manual)
+  cursor             Cursor                         C:\Users\joshy\.cursor\mcp.json  (file not found)
+  vscode             VS Code (GitHub Copilot)       C:\Users\joshy\Grand Police Auto\Assets\McpSetup~\.vscode\mcp.json  (file not found)
+  vscode-insiders    VS Code Insiders (GitHub Copilot) C:\Users\joshy\Grand Police Auto\Assets\McpSetup~\.vscode\mcp.json  (file not found)
+  copilot-cli        GitHub Copilot CLI             C:\Users\joshy\.copilot\mcp-config.json  (file not found)
+  windsurf           Windsurf                       C:\Users\joshy\.codeium\windsurf\mcp_config.json  (file not found)
+  cline              Cline (VS Code)                C:\Users\joshy\AppData\Roaming\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json  (file not found)
+  codex              OpenAI Codex CLI               C:\Users\joshy\.codex\config.toml  ΓÇô not configured
+  kiro               Kiro (AWS)                     C:\Users\joshy\.kiro\settings\mcp.json  (file not found)
+  kimi               Kimi CLI                       C:\Users\joshy\.kimi\mcp.json  (file not found)
+  trae               Trae                             (no file ΓÇö delegation/manual)
+  openclaw           OpenClaw                         (no file ΓÇö delegation/manual)
+  antigravity        Antigravity                    C:\Users\joshy\.gemini\config\mcp_config.json  (file not found)
+  zed                Zed                            C:\Users\joshy\AppData\Roaming\Zed\settings.json  (file not found)
+  continue           Continue                         (no file ΓÇö delegation/manual)
+  inspect            MCP Inspector                    (no file ΓÇö delegation/manual)
+
+Usage: unity mcp configure <client>
+Store package folder: C:\Users\joshy\AppData\Local\Packages\Claude_pzs8sxrjxfjjc
+CONFIG C:\Users\joshy\AppData\Roaming\Claude\claude_desktop_config.json  servers: unity
+  unity entry 'unity': C:\Users\joshy\AppData\Local\Unity\bin\unity.exe mcp --tool-groups --project-path C:\Users\joshy\Grand Police Auto
+missing: C:\Users\joshy\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json
+== Claude processes ==
+
+Name      Id Path                                                                             
+----      -- ----                                                                             
+claude  4760 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 10336 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 29140 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 39892 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 41360 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 46364 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 47904 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 56228 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+claude 59996 C:\Program Files\WindowsApps\Claude_5.11492.5.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+DIAG COMPLETE
+**********************
+Windows PowerShell transcript end
+End time: 20261118060841
+**********************

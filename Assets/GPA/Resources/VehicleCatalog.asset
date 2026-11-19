@@ -1,0 +1,458 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 125bdc6171f88ff468198d3113c5dec2, type: 3}
+  m_Name: VehicleCatalog
+  m_EditorClassIdentifier: GPA.TopDown2D::GPA.TopDown2D.VehicleCatalog
+  Vehicles:
+  - Id: sedan
+    DisplayName: Sedan
+    Role: 0
+    Sprites:
+    - {fileID: 21300000, guid: c340f377f61a90f44bcd23345f9e111a, type: 3}
+    - {fileID: 21300000, guid: 36b7a7d0a8bc5c04a9a57c2d1aa01b6b, type: 3}
+    - {fileID: 21300000, guid: 8811c05643564ed45b168105c63acd94, type: 3}
+    ColourNames:
+    - Red
+    - Grey
+    - Green
+    Models:
+    - Meridian
+    - Sable
+    - Crestline
+    Width: 2.3
+    Length: 4.6
+    Mass: 1500
+    TopSpeed: 34
+    Acceleration: 7.5
+    Braking: 26
+    TurnRate: 190
+    Grip: 9
+    Lightbar: 0
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: 
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 3
+  - Id: taxi
+    DisplayName: Taxi
+    Role: 0
+    Sprites:
+    - {fileID: 21300000, guid: b99798fe4eda5dc41ab6e8ea72c22fa3, type: 3}
+    ColourNames:
+    - Yellow
+    Models:
+    - Metro Cab
+    Width: 2.3
+    Length: 4.6
+    Mass: 1500
+    TopSpeed: 34
+    Acceleration: 7.5
+    Braking: 26
+    TurnRate: 190
+    Grip: 9
+    Lightbar: 0
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: 
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 0.5
+  - Id: compact
+    DisplayName: Compact
+    Role: 0
+    Sprites:
+    - {fileID: 21300000, guid: c6446e9bd6856db46a22d8b3ec4c0874, type: 3}
+    - {fileID: 21300000, guid: 61dc1636c1d4ca644b776a1c7d36ce11, type: 3}
+    - {fileID: 21300000, guid: a4efbe66b02935643bfc33f1a75a2cf6, type: 3}
+    - {fileID: 21300000, guid: 257fd607b4aa31046a83b0bcf4ba6215, type: 3}
+    ColourNames:
+    - Red
+    - Blue
+    - White
+    - Green
+    Models:
+    - Pixie
+    - Zip
+    - Metro
+    Width: 2
+    Length: 3.5
+    Mass: 1100
+    TopSpeed: 30
+    Acceleration: 8
+    Braking: 26
+    TurnRate: 210
+    Grip: 9
+    Lightbar: 0
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: 
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1.2
+  - Id: suv
+    DisplayName: SUV
+    Role: 0
+    Sprites:
+    - {fileID: 21300000, guid: 066f9108c0553654b8fe25fa6a9e3d01, type: 3}
+    - {fileID: 21300000, guid: c314543d01e59254ca369c2e9627c0b3, type: 3}
+    - {fileID: 21300000, guid: 62ccb0c00aaf22b4bb5f311edbee1969, type: 3}
+    - {fileID: 21300000, guid: 8ad925b2e1cc5eb4981a6682fc315d00, type: 3}
+    ColourNames:
+    - Black
+    - Silver
+    - Blue
+    - White
+    Models:
+    - Trailhead
+    - Summit
+    - Ridgeline
+    Width: 2.45
+    Length: 4.85
+    Mass: 2100
+    TopSpeed: 32
+    Acceleration: 7
+    Braking: 26
+    TurnRate: 175
+    Grip: 9
+    Lightbar: 0
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: 
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1.6
+  - Id: pickup
+    DisplayName: Pickup Truck
+    Role: 0
+    Sprites:
+    - {fileID: 21300000, guid: 60e714cd18fa48843a8562f81c4bd79b, type: 3}
+    - {fileID: 21300000, guid: 97689c13f98f1074c91d04835c90db51, type: 3}
+    - {fileID: 21300000, guid: f566cf9cb98457545b385f6b4f3e486f, type: 3}
+    - {fileID: 21300000, guid: d060481fb1ad4b147a040c128bf36a31, type: 3}
+    ColourNames:
+    - White
+    - Red
+    - Black
+    - Tan
+    Models:
+    - Hauler
+    - Workhorse
+    - Ranchero
+    Width: 2.45
+    Length: 5.35
+    Mass: 2300
+    TopSpeed: 31
+    Acceleration: 6.8
+    Braking: 26
+    TurnRate: 170
+    Grip: 9
+    Lightbar: 0
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: 
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1.1
+  - Id: delivery_van
+    DisplayName: Delivery Van
+    Role: 0
+    Sprites:
+    - {fileID: 21300000, guid: 5d790569194714e49892a6c67c5368f8, type: 3}
+    - {fileID: 21300000, guid: 570e284c126d79c44bf511fc5d47d7e9, type: 3}
+    ColourNames:
+    - White
+    - Brown
+    Models:
+    - Courier Van
+    - Sprint Cargo
+    Width: 2.6
+    Length: 5.7
+    Mass: 2800
+    TopSpeed: 26
+    Acceleration: 5.5
+    Braking: 26
+    TurnRate: 150
+    Grip: 9
+    Lightbar: 0
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: 
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 0.5
+  - Id: box_truck
+    DisplayName: Box Truck
+    Role: 0
+    Sprites:
+    - {fileID: 21300000, guid: 05403c5b32a0f7a47bef19b5ea8de442, type: 3}
+    - {fileID: 21300000, guid: a6ee0dac5ed9a9e4680b56ad0b961c61, type: 3}
+    ColourNames:
+    - White
+    - Yellow
+    Models:
+    - Box 16
+    - Cargo Master
+    Width: 2.9
+    Length: 8.7
+    Mass: 6500
+    TopSpeed: 22
+    Acceleration: 4
+    Braking: 18
+    TurnRate: 120
+    Grip: 9
+    Lightbar: 0
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: 
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 0.3
+  - Id: patrol_sedan
+    DisplayName: Patrol Sedan
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: a62600a0f2b478548ac8fc118393dc13, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.3
+    Length: 4.6
+    Mass: 1600
+    TopSpeed: 40
+    Acceleration: 9
+    Braking: 26
+    TurnRate: 195
+    Grip: 9
+    Lightbar: 1
+    LightbarForward: 0.19
+    LightbarHalfWidth: 0.38
+    RequiredLevel: 1
+    Blurb: All-round patrol car.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1
+  - Id: patrol_suv
+    DisplayName: Patrol SUV
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: 8d331501df194a74a9038911b82600b8, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.45
+    Length: 4.85
+    Mass: 2300
+    TopSpeed: 38
+    Acceleration: 8.5
+    Braking: 26
+    TurnRate: 180
+    Grip: 9
+    Lightbar: 1
+    LightbarForward: 0.67
+    LightbarHalfWidth: 0.39
+    RequiredLevel: 1
+    Blurb: Roomier, tougher, a bit slower.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1
+  - Id: patrol_pickup
+    DisplayName: Patrol Pickup
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: edd6fb4ef71b85a45a6cfb56fd456ea5, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.45
+    Length: 5.35
+    Mass: 2500
+    TopSpeed: 36
+    Acceleration: 8
+    Braking: 26
+    TurnRate: 172
+    Grip: 9
+    Lightbar: 1
+    LightbarForward: 0.79
+    LightbarHalfWidth: 0.39
+    RequiredLevel: 2
+    Blurb: Heavy-duty truck, good at pushing.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1
+  - Id: motorcycle
+    DisplayName: Traffic Motorcycle
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: 4fbc0a82c842bad4cb301cca935fcf52, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 0.9
+    Length: 2.2
+    Mass: 300
+    TopSpeed: 46
+    Acceleration: 12
+    Braking: 26
+    TurnRate: 240
+    Grip: 12
+    Lightbar: 1
+    LightbarForward: -0.52
+    LightbarHalfWidth: 0.19
+    RequiredLevel: 2
+    Blurb: Nimble, quick, slips through traffic.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 1
+    TrafficWeight: 1
+  - Id: unmarked
+    DisplayName: Unmarked Sedan
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: 333c9a576af12d44bade0928179e3052, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.3
+    Length: 4.6
+    Mass: 1600
+    TopSpeed: 42
+    Acceleration: 9.5
+    Braking: 26
+    TurnRate: 195
+    Grip: 9
+    Lightbar: 1
+    LightbarForward: 0.42
+    LightbarHalfWidth: 0.2
+    RequiredLevel: 3
+    Blurb: Plain car with hidden dash lights.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1
+  - Id: transport
+    DisplayName: Prisoner Transport
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: ef850e2140b86a44ba5c24a93ccefdc7, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.7
+    Length: 6.4
+    Mass: 3200
+    TopSpeed: 30
+    Acceleration: 6
+    Braking: 26
+    TurnRate: 150
+    Grip: 9
+    Lightbar: 1
+    LightbarForward: 1.75
+    LightbarHalfWidth: 0.44
+    RequiredLevel: 3
+    Blurb: Van with a caged rear for prisoners.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1
+  - Id: interceptor
+    DisplayName: Highway Interceptor
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: f3f44d2cddc0a8e4eb283b403db43f9b, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.3
+    Length: 4.3
+    Mass: 1600
+    TopSpeed: 50
+    Acceleration: 12
+    Braking: 26
+    TurnRate: 205
+    Grip: 9
+    Lightbar: 1
+    LightbarForward: 0
+    LightbarHalfWidth: 0.3
+    RequiredLevel: 4
+    Blurb: Fastest car in the fleet, for pursuits.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1
+  - Id: bearcat
+    DisplayName: BearCat (armored)
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: 1fca564170011c249b45ae16f903417e, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.9
+    Length: 6
+    Mass: 8000
+    TopSpeed: 28
+    Acceleration: 5
+    Braking: 26
+    TurnRate: 135
+    Grip: 9
+    Lightbar: 1
+    LightbarForward: 1.16
+    LightbarHalfWidth: 0.33
+    RequiredLevel: 5
+    Blurb: Armored rescue vehicle. Nothing stops it.
+    Helicopter: 0
+    RotorSprite: {fileID: 0}
+    Motorcycle: 0
+    TrafficWeight: 1
+  - Id: helicopter
+    DisplayName: Air Unit Helicopter
+    Role: 1
+    Sprites:
+    - {fileID: 21300000, guid: 8e9a99c4ea67699409db318dd8488416, type: 3}
+    ColourNames:
+    - Police
+    Models: []
+    Width: 2.6
+    Length: 11.6
+    Mass: 3000
+    TopSpeed: 55
+    Acceleration: 10
+    Braking: 12
+    TurnRate: 110
+    Grip: 2.2
+    Lightbar: 1
+    LightbarForward: 1.1
+    LightbarHalfWidth: 0.25
+    RequiredLevel: 6
+    Blurb: Flies over everything. Land on open ground.
+    Helicopter: 1
+    RotorSprite: {fileID: 21300000, guid: 36beb2ec4f690424d81503555f8b0887, type: 3}
+    Motorcycle: 0
+    TrafficWeight: 1

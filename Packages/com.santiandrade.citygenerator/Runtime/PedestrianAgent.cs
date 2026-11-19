@@ -1,0 +1,673 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace CityGenerator.Runtime
+{
+    /// <summary>NPC states. Interacting is reserved for a future spec (peer/player interaction) and never entered.</summary>
+    public enum PedestrianState { Walking, WaitingToCross, Idling, Interacting }
+
+    /// <summary>
+    /// Walks the <see cref="PedestrianNetwork"/> graph from destination to destination, moving by
+    /// transform (no CharacterController/Rigidbody, mirroring CarAgent). Waits at a curb until the
+    /// crossing ahead is clear, and occasionally stops idle before picking a new destination.
+    /// Animates with the same Speed/Grounded mapping PlayerController uses, so it shares
+    /// CharacterAnimator.controller's Locomotion blend tree unmodified.
+    /// </summary>
+    [RequireComponent(typeof(Animator))]
+    public class PedestrianAgent : MonoBehaviour
+    {
+        [Header("Network")]
+        [SerializeField] private PedestrianNetwork network;
+
+        // Null for a normal pedestrian (unrestricted, exactly the pre-SPEC-12 behaviour). Set by
+        // CityGeneratorCustomPedestrianBuilder for a Custom Pedestrian: PlanNewDestination then
+        // never plans or walks outside this subset. Must be [SerializeField] -- a plain private
+        // field is wiped back to null by the domain reload that (by default) precedes entering
+        // Play mode, silently turning every Custom Pedestrian back into an unrestricted one; same
+        // reasoning as PedestrianNetwork.useCustomShape.
+        [SerializeField] private List<int> allowedNodes;
+
+        /// <summary>Confines this agent to <paramref name="nodes"/> (SPEC 12: Custom Pedestrians). Pass null to remove the restriction.</summary>
+        public void SetAllowedNodes(List<int> nodes) => allowedNodes = nodes;
+
+        [Header("Movement")]
+        [Tooltip("Speed at which CharacterAnimator.controller's Locomotion blend tree reaches Speed = 0.5 (matches PlayerWalkSpeed exactly) — a calibration anchor, not this pedestrian's own pace.")]
+        [SerializeField] private float walkReferenceSpeed = 4f;
+
+        [Tooltip("Speed at which the blend tree reaches Speed = 1 (matches PlayerRunSpeed exactly) — the other calibration anchor.")]
+        [SerializeField] private float runReferenceSpeed = 8f;
+
+        [Tooltip("Most pedestrians stroll at this fraction of walkReferenceSpeed, not a full player-paced walk.")]
+        [SerializeField] private float paceFraction = 0.5f;
+
+        [Tooltip("Chance a pedestrian is a 'runner' (jogging, or late) instead of a regular stroller, moving at runReferenceSpeed.")]
+        [SerializeField] private float runnerChance = 0.15f;
+
+        [Tooltip("Per-instance +-fraction speed jitter, rolled once at spawn.")]
+        [SerializeField] private float speedJitter = 0.1f;
+
+        [Tooltip("Per-instance +-lateral offset from the path centreline, rolled once at spawn, so parallel walkers don't render as a single file line.")]
+        [SerializeField] private float lateralJitter = 0.4f;
+
+        [SerializeField] private float rotationSpeed = 360f;
+        [SerializeField] private float arriveRadius = 0.3f;
+
+        [Header("Spawn")]
+        [Tooltip("Set per-instance by CityGeneratorPedestrianBuilder.BuildPedestrians (spawn order). Used only to stagger this agent's first PlanNewDestination across several seconds instead of every agent planning on the same frame Start() runs -- see initialPlanStaggerSeconds.")]
+        [SerializeField] private int spawnIndex;
+
+        // Per-agent delay before its *first* PlanNewDestination call, item 9's answer to "every
+        // pedestrian spawned at once plans in the same frame". Reuses the existing Idling
+        // state/stopUntilTime machinery below rather than adding a new one: Start() enters Idling
+        // with a staggered stopUntilTime instead of calling PlanNewDestination directly.
+        private const float InitialPlanStaggerSeconds = 0.01f;
+
+        [Header("Stops")]
+        [SerializeField] private float idleStopChance = 0.3f;
+        [SerializeField] private float idleStopDurationMin = 2f;
+        [SerializeField] private float idleStopDurationMax = 6f;
+
+        private static readonly int SpeedHash = Animator.StringToHash("Speed");
+        private static readonly int GroundedHash = Animator.StringToHash("Grounded");
+
+        private Animator animator;
+        // A prefab with no Animator (or one with no controller assigned) still walks fine — only
+        // the animation is skipped. Without this guard every SetFloat/SetBool call below spams
+        // "Animator is not playing an AnimatorController" once per frame.
+        private bool hasAnimatorController;
+        private PedestrianManager manager;
+        private PedestrianState state = PedestrianState.Walking;
+
+        // Sized to the actual length of this agent's *current* path, grown only when a longer one
+        // is planned -- not to network.NodeCount up front. Item 9: FindPath's own output buffer
+        // (which does need the full nodeCount-worst-case size) is rented from
+        // PedestrianManager.PathBufferPool for the duration of PlanNewDestination and returned
+        // immediately after the used prefix is copied in here, instead of every agent keeping its
+        // own permanent nodeCount-sized array alive for its whole lifetime.
+        private int[] path;
+        private int pathLength;
+        private int pathIndex;
+        private int currentNode = -1;
+
+        private float effectiveSpeed;
+        // Animator Speed matching effectiveSpeed, computed once at spawn with the same
+        // proportional mapping PlayerController uses (0..0.5 across the walk range, 0.5..1
+        // across the run range) so the shared blend tree never foot-slides regardless of pace.
+        private float normalizedSpeed;
+        private float lateralOffset;
+        private float stopUntilTime;
+        private float distanceTravelled;
+        // Root proxy collider (see CityGeneratorColliderUtility), resolved in OnEnable and kept so
+        // OnDisable can deregister the very same instance from VehiclePedestrianCollisionFilter.
+        private Collider ownCollider;
+
+        public PedestrianState State => state;
+        public int CurrentNode => currentNode;
+
+        /// <summary>
+        /// SPEC 20 (c): true while this pedestrian walks, or waits to start, a crosswalk arm (one
+        /// end of its current path segment is a Crossing node) -- the only place a generated
+        /// pedestrian ever sets foot on the road. Read by PedestrianRoadProximityGrid.
+        /// </summary>
+        public bool IsOnCrossingArm
+        {
+            get
+            {
+                if (network == null || path == null || pathIndex >= pathLength)
+                    return false;
+                if (state != PedestrianState.Walking && state != PedestrianState.WaitingToCross)
+                    return false;
+
+                if (currentNode >= 0 && network.GetNode(currentNode).Kind == PedestrianNodeKind.Crossing)
+                    return true;
+                return network.GetNode(path[pathIndex]).Kind == PedestrianNodeKind.Crossing;
+            }
+        }
+        /// <summary>Total distance walked so far, for diagnosing stuck/jammed agents — mirrors CarAgent.DistanceTravelled.</summary>
+        public float DistanceTravelled => distanceTravelled;
+
+        // SPEC 20: first renderer of the hierarchy, for PedestrianManager's visibility staggering.
+        private Renderer visibilityRenderer;
+
+        /// <summary>SPEC 20: whether any camera renders this pedestrian. True without a renderer.</summary>
+        public bool IsVisible => visibilityRenderer == null || visibilityRenderer.isVisible;
+
+        /// <summary>SPEC 20: whether its root collider is on (PedestrianManager's collider LOD
+        /// switches it off far from the focus). True without a collider.</summary>
+        public bool IsColliderActive => ownCollider == null || colliderActive;
+
+        // Cached, so the collider LOD never asks the engine for every agent every frame.
+        private bool colliderActive = true;
+
+        /// <summary>
+        /// SPEC 20, called by PedestrianManager's collider LOD: switches the root proxy collider on
+        /// or off. Switching it back on pairs it again with every physics vehicle, since Unity drops
+        /// a disabled collider's ignored pairs -- including any a user's own code had set on it.
+        /// </summary>
+        internal void SetColliderActive(bool active)
+        {
+            if (ownCollider == null || colliderActive == active)
+                return;
+
+            colliderActive = active;
+            ownCollider.enabled = active;
+            if (active)
+                VehiclePedestrianCollisionFilter.RepairPedestrian(ownCollider);
+        }
+
+        // SPEC 20: false while an external renderer draws this pedestrian (see SetAnimatorDriven).
+        private bool animatorDriven = true;
+
+        /// <summary>
+        /// SPEC 20: the Locomotion blend tree's Speed this pedestrian is walking at (0 while
+        /// waiting or idling), for a renderer that draws it without its Animator.
+        /// </summary>
+        public float AnimationSpeed => state == PedestrianState.Walking ? normalizedSpeed : 0f;
+
+        /// <summary>
+        /// SPEC 20: with false, this agent stops writing its Animator's parameters and disables the
+        /// Animator, for a project that draws far pedestrians itself (e.g. with baked animation);
+        /// with true, it enables it again and writes the current parameters at once.
+        /// </summary>
+        public void SetAnimatorDriven(bool driven)
+        {
+            if (animatorDriven == driven)
+                return;
+
+            animatorDriven = driven;
+            if (animator == null)
+                return;
+
+            animator.enabled = driven;
+            if (driven && hasAnimatorController)
+            {
+                animator.SetFloat(SpeedHash, AnimationSpeed);
+                animator.SetBool(GroundedHash, true);
+            }
+        }
+
+        /// <summary>
+        /// SPEC 20: puts this pedestrian on node <paramref name="node"/> of its network (on the
+        /// ground under it), facing its current way, and has it pick a new destination after a short
+        /// pause -- as if it had just walked there. Returns false, changing nothing, for a node that
+        /// is out of range, blocked, a Crossing (the middle of a road), or outside a Custom
+        /// Pedestrian's allowed nodes. Works before its first Start too.
+        /// </summary>
+        public bool Relocate(int node)
+        {
+            if (network == null)
+                network = FindAnyObjectByType<PedestrianNetwork>();
+            if (network == null || node < 0 || node >= network.NodeCount)
+                return false;
+
+            PedestrianNode target = network.GetNode(node);
+            if (target.Blocked || target.Kind == PedestrianNodeKind.Crossing)
+                return false;
+            if (allowedNodes != null && allowedNodes.Count > 0 && !allowedNodes.Contains(node))
+                return false;
+
+            Vector3 position = target.Position;
+            position.y = ResolveGroundY(position, position.y);
+            transform.position = position;
+
+            currentNode = node;
+            pathLength = 0;
+            pathIndex = 0;
+            StartIdling(0.1f, 0.5f);
+            if (hasAnimatorController && animatorDriven)
+                animator.SetFloat(SpeedHash, 0f);
+            return true;
+        }
+
+        private void Awake()
+        {
+            visibilityRenderer = GetComponentInChildren<Renderer>();
+            animator = GetComponent<Animator>();
+            hasAnimatorController = animator.runtimeAnimatorController != null;
+        }
+
+        private void OnEnable()
+        {
+            // SPEC 17: this agent's root proxy collider (CityGeneratorColliderUtility puts exactly
+            // one there) is paired against every Rigidbody-mode vehicle so a pedestrian -- a static
+            // collider moved by transform, i.e. infinite mass to PhysX -- can't shove a car off its
+            // lane. Registered here, not once at scene start, because Unity resets a collider's
+            // ignore state whenever it is disabled and re-enabled. Costs nothing while no vehicle
+            // is registered, which is every city generated with Enable Physics off.
+            ownCollider = GetComponent<Collider>();
+            colliderActive = ownCollider == null || ownCollider.enabled;
+            VehiclePedestrianCollisionFilter.RegisterPedestrian(ownCollider);
+
+            if (network == null)
+            {
+                network = FindAnyObjectByType<PedestrianNetwork>();
+            }
+
+            // Ticked centrally by PedestrianManager rather than through this component's own
+            // Update, same convention as CarAgent/TrafficManager. Resolved through the network
+            // (set on the same GameObject as the manager by
+            // CityGeneratorPedestrianBuilder.AddManagerComponent) instead of a global static
+            // Instance, so multiple cities/networks coexisting in the same scene never share, or
+            // fight over, a single manager. Falls back to finding/creating one so a
+            // PedestrianAgent dropped into a scene outside the generator still walks. Register is
+            // idempotent (contains-checked), so re-enabling an already-registered agent here is
+            // harmless.
+            manager = network != null && network.Manager != null ? network.Manager : FindAnyObjectByType<PedestrianManager>();
+            if (manager == null)
+            {
+                manager = new GameObject("PedestrianManager").AddComponent<PedestrianManager>();
+            }
+            manager.Register(this);
+        }
+
+        private void Start()
+        {
+            if (network == null)
+            {
+                network = FindAnyObjectByType<PedestrianNetwork>();
+            }
+
+            if (network == null)
+            {
+                Debug.LogError($"{name}: no PedestrianNetwork found in the scene.", this);
+                enabled = false;
+                return;
+            }
+
+            bool isRunner = Random.value < runnerChance;
+            float basePace = isRunner ? runReferenceSpeed : walkReferenceSpeed * paceFraction;
+            effectiveSpeed = basePace * (1f + Random.Range(-speedJitter, speedJitter));
+            normalizedSpeed = effectiveSpeed <= walkReferenceSpeed
+                ? Mathf.Lerp(0f, 0.5f, effectiveSpeed / walkReferenceSpeed)
+                : Mathf.Lerp(0.5f, 1f, (effectiveSpeed - walkReferenceSpeed) / (runReferenceSpeed - walkReferenceSpeed));
+            lateralOffset = Random.Range(-lateralJitter, lateralJitter);
+
+            currentNode = network.FindNearestNode(transform.position, PedestrianNodeKind.Ring);
+            if (currentNode < 0)
+            {
+                Debug.LogError($"{name}: no Ring node found near the spawn position.", this);
+                enabled = false;
+                return;
+            }
+
+            // Staggers this agent's first PlanNewDestination instead of every spawned pedestrian
+            // planning on the same frame (Unity runs every pending Start() in one batch before the
+            // first Update, so without this every agent's initial BFS/candidate search would land
+            // in a single frame). Tick's existing Idling branch below picks this up naturally once
+            // stopUntilTime elapses -- no separate state machine needed.
+            StartIdling(spawnIndex * InitialPlanStaggerSeconds, spawnIndex * InitialPlanStaggerSeconds);
+        }
+
+        private void OnDisable()
+        {
+            VehiclePedestrianCollisionFilter.UnregisterPedestrian(ownCollider);
+            if (manager != null)
+            {
+                manager.Unregister(this);
+                manager = null;
+            }
+        }
+
+        /// <summary>
+        /// Advances this pedestrian by <paramref name="dt"/>. Called once per frame by
+        /// PedestrianManager for every registered agent, instead of through this component's own
+        /// Update. Movement and animation always run; when <paramref name="runLogic"/> is false,
+        /// the arrival/replanning/crossing decisions below are skipped for this tick and picked
+        /// back up next time it's true — PedestrianManager only does this for agents far from the
+        /// camera, same convention as TrafficManager staggering CarAgent's sensor.
+        /// </summary>
+        public void Tick(float dt, bool runLogic) => Tick(dt, runLogic, exactGrounding: true);
+
+        /// <summary>
+        /// SPEC 20: as <see cref="Tick(float, bool)"/>; with <paramref name="exactGrounding"/> false
+        /// the agent skips its ground raycast while it walks between two nodes on the same flat
+        /// surface, and on the other ticks casts it only when <paramref name="runLogic"/> is true.
+        /// </summary>
+        internal void Tick(float dt, bool runLogic, bool exactGrounding)
+        {
+            groundEveryTick = exactGrounding;
+            groundThisTick = exactGrounding || runLogic;
+            switch (state)
+            {
+                case PedestrianState.Walking:
+                    TickWalking(dt, runLogic);
+                    break;
+                case PedestrianState.WaitingToCross:
+                    if (hasAnimatorController && animatorDriven)
+                    {
+                        animator.SetFloat(SpeedHash, 0f);
+                    }
+                    if (runLogic)
+                    {
+                        TryResumeCrossing();
+                    }
+                    break;
+                case PedestrianState.Idling:
+                    if (hasAnimatorController && animatorDriven)
+                    {
+                        animator.SetFloat(SpeedHash, 0f);
+                    }
+                    if (runLogic && Time.time >= stopUntilTime)
+                    {
+                        PlanNewDestination();
+                    }
+                    break;
+            }
+
+            if (hasAnimatorController && animatorDriven)
+            {
+                animator.SetBool(GroundedHash, true);
+            }
+        }
+
+        private void TickWalking(float dt, bool runLogic)
+        {
+            Vector3 targetPosition = AimPoint(pathIndex);
+            MoveTowards(targetPosition, dt);
+            if (hasAnimatorController && animatorDriven)
+            {
+                animator.SetFloat(SpeedHash, normalizedSpeed);
+            }
+
+            if (!runLogic)
+            {
+                return;
+            }
+
+            if (Vector3.Distance(transform.position, targetPosition) > arriveRadius)
+            {
+                return;
+            }
+
+            currentNode = path[pathIndex];
+            pathIndex++;
+
+            if (pathIndex >= pathLength)
+            {
+                OnReachedDestination();
+                return;
+            }
+
+            int nextNode = path[pathIndex];
+            PedestrianNode arrived = network.GetNode(currentNode);
+            PedestrianNode next = network.GetNode(nextNode);
+            if (arrived.Kind == PedestrianNodeKind.Curb && next.Kind == PedestrianNodeKind.Crossing && !network.CanCross(nextNode))
+            {
+                state = PedestrianState.WaitingToCross;
+            }
+        }
+
+        private void TryResumeCrossing()
+        {
+            int nextNode = path[pathIndex];
+            if (network.CanCross(nextNode))
+            {
+                state = PedestrianState.Walking;
+            }
+        }
+
+        private void OnReachedDestination()
+        {
+            if (Random.value < idleStopChance)
+            {
+                StartIdling(idleStopDurationMin, idleStopDurationMax);
+                return;
+            }
+
+            PlanNewDestination();
+        }
+
+        private void StartIdling(float min, float max)
+        {
+            state = PedestrianState.Idling;
+            stopUntilTime = Time.time + Random.Range(min, max);
+        }
+
+        // Rolling several random candidates and trying them farthest-first (straight-line) biases
+        // every route towards being long, instead of an NPC shuffling between adjacent blocks.
+        // Reused across calls so ranking them doesn't allocate a new array every replan.
+        private const int DestinationCandidateAttempts = 8;
+        private readonly int[] candidateNodes = new int[DestinationCandidateAttempts];
+        private readonly float[] candidateSqrDistances = new float[DestinationCandidateAttempts];
+
+        /// <summary>
+        /// Picks a new, deliberately-far destination and plans a path to it from the current node.
+        /// Tries every candidate farthest-first rather than committing to only the single farthest
+        /// one: a block with just one link to the rest of the network (e.g. a grid corner block,
+        /// whose ring touches only one interior intersection) would otherwise see its farthest
+        /// random draw be unreachable almost every time — since virtually every node in a large
+        /// graph is "far" from it — leaving the agent idling forever instead of ever walking.
+        ///
+        /// SPEC 10: a drawn Interior candidate is tried first, in draw order (not ranked by
+        /// distance) -- straight-line distance from here always favours a spatially localized
+        /// area's boundary over its interior (a point at its edge is, by definition, at least as
+        /// far from any approach direction as a point at its centre), so ranking it alongside Ring
+        /// candidates by that same metric meant a chosen Interior destination was (almost) never
+        /// actually inside it -- observed directly in Play mode.
+        /// </summary>
+        private void PlanNewDestination()
+        {
+            // Unity always constructs a [SerializeField] List<int> as an empty list rather than
+            // leaving it null (confirmed via get_serialized_fields on a normal, never-restricted
+            // pedestrian: allowedNodes came back as an empty array, not a null reference) -- so an
+            // unrestricted agent's allowedNodes is empty, not null, and the restriction checks
+            // below must treat both the same way instead of only null.
+            List<int> restriction = allowedNodes != null && allowedNodes.Count > 0 ? allowedNodes : null;
+
+            Vector3 fromPosition = network.GetNode(currentNode).Position;
+            int candidateCount = 0;
+            // A Custom Pedestrian's allowedNodes is validated (SPEC 12) to be a single connected
+            // component already, so the component filter below is redundant for it -- and would be
+            // wrong to apply anyway, since ComponentOf reflects the *whole* graph's topology, not
+            // the restricted subset's.
+            int requiredComponent = restriction == null ? network.ComponentOf(currentNode) : -1;
+
+            for (int attempt = 0; attempt < DestinationCandidateAttempts; attempt++)
+            {
+                int candidate = network.PickRandomDestination(requiredComponent, restriction);
+                if (candidate < 0 || candidate == currentNode)
+                {
+                    continue;
+                }
+
+                candidateNodes[candidateCount] = candidate;
+                candidateSqrDistances[candidateCount] = (network.GetNode(candidate).Position - fromPosition).sqrMagnitude;
+                candidateCount++;
+            }
+
+            // Partition in place: every Interior candidate first (left in draw order, i.e.
+            // unbiased), then every Ring candidate after. Only the Ring portion gets sorted by
+            // distance below -- see the method doc for why Interior deliberately skips it.
+            int localCandidateCount = 0;
+            for (int i = 0; i < candidateCount; i++)
+            {
+                PedestrianNodeKind kind = network.GetNode(candidateNodes[i]).Kind;
+                if (kind == PedestrianNodeKind.Interior)
+                {
+                    (candidateNodes[localCandidateCount], candidateNodes[i]) = (candidateNodes[i], candidateNodes[localCandidateCount]);
+                    (candidateSqrDistances[localCandidateCount], candidateSqrDistances[i]) = (candidateSqrDistances[i], candidateSqrDistances[localCandidateCount]);
+                    localCandidateCount++;
+                }
+            }
+
+            // Simple insertion sort (descending by distance), Ring candidates only: candidateCount
+            // is at most DestinationCandidateAttempts, so this is cheaper than allocating for a
+            // real sort.
+            for (int i = localCandidateCount + 1; i < candidateCount; i++)
+            {
+                int node = candidateNodes[i];
+                float sqrDistance = candidateSqrDistances[i];
+                int j = i - 1;
+                while (j >= localCandidateCount && candidateSqrDistances[j] < sqrDistance)
+                {
+                    candidateNodes[j + 1] = candidateNodes[j];
+                    candidateSqrDistances[j + 1] = candidateSqrDistances[j];
+                    j--;
+                }
+                candidateNodes[j + 1] = node;
+                candidateSqrDistances[j + 1] = sqrDistance;
+            }
+
+            for (int i = 0; i < candidateCount; i++)
+            {
+                int[] scratch = manager.PathBufferPool.Rent();
+                int length = network.FindPath(currentNode, candidateNodes[i], scratch, restriction);
+                if (length > 1)
+                {
+                    EnsurePathCapacity(length);
+                    System.Array.Copy(scratch, path, length);
+                    pathLength = length;
+                    pathIndex = 1; // path[0] == currentNode
+                    state = PedestrianState.Walking;
+                    manager.PathBufferPool.Return(scratch);
+                    return;
+                }
+                manager.PathBufferPool.Return(scratch);
+            }
+
+            // None of this round's candidates were reachable (e.g. an isolated block on a 1xN
+            // grid): settle briefly and try again with a fresh random draw instead of spinning.
+            StartIdling(1f, 2f);
+        }
+
+        private void EnsurePathCapacity(int length)
+        {
+            if (path == null || path.Length < length)
+                path = new int[length];
+        }
+
+        /// <summary>
+        /// Aim point for the current path segment, offset sideways by this instance's lateral
+        /// jitter. The perpendicular direction is derived from the segment's own fixed endpoints
+        /// (previous node -> target node), never from the agent's live position: deriving it from
+        /// "vector to target" instead is unstable at close range (a short vector's direction spins
+        /// wildly from tiny position changes), which made the agent's facing flip back and forth
+        /// right before arriving at every node.
+        /// </summary>
+        private Vector3 AimPoint(int targetPathIndex)
+        {
+            Vector3 nodePosition = network.GetNode(path[targetPathIndex]).Position;
+            Vector3 fromPosition = currentNode >= 0 ? network.GetNode(currentNode).Position : transform.position;
+            Vector3 travelDir = nodePosition - fromPosition;
+            travelDir.y = 0f;
+            if (travelDir.sqrMagnitude < 0.0001f)
+            {
+                return nodePosition;
+            }
+
+            Vector3 perpendicular = new(travelDir.z, 0f, -travelDir.x);
+            return nodePosition + perpendicular.normalized * lateralOffset;
+        }
+
+        // Two node-graph-timing approaches (smearing the sidewalkY/roadY step across the whole
+        // curb<->crossing segment, then chasing it from whichever end the Curb node fell on) both
+        // still guessed *when* the step should happen instead of asking where it actually is.
+        // Grounding by raycast sidesteps that entirely: the agent's Y just always matches whatever
+        // real floor collider (RoadBase/Sidewalk, both BoxColliders -- see CLAUDE.md "Demo
+        // content") sits under its current XZ, so the step happens on the exact frame the agent's
+        // feet cross the true collider edge, not an approximation of it. groundMask defaults to
+        // Default (every floor/building/prop collider) since Vehicle/Pedestrian are dynamically
+        // assigned layers created at generation time and never used for ground geometry.
+        [Header("Grounding")]
+        [Tooltip("Raycast downward each frame to find the real floor height under the agent, instead of trusting the network's own sidewalkY/roadY node heights and the timing of travel between them.")]
+        [SerializeField] private LayerMask groundMask = 1;
+
+        private const float GroundRayUpOffset = 1f;
+        private const float GroundRayDownDistance = 3f;
+
+        // SPEC 20, grounding shortcut: set by each Tick from PedestrianManager. Two raycasts at
+        // the start of a stretch (the agent's position and its aim point) tell whether the whole
+        // stretch is on one flat surface: same collider, both normals straight up, same height. A
+        // box's top face is convex, so a straight walk between two points on it stays on it. Any
+        // stretch that touches a Curb or Crossing node has the kerb step in it and is never flat.
+        private const float FlatNormalY = 0.999f;
+        private const float FlatHeightTolerance = 0.005f;
+        private bool groundEveryTick = true;
+        private bool groundThisTick = true;
+        private int flatStretchFrom = -1;
+        private int flatStretchTo = -1;
+        private bool flatStretch;
+        private float flatStretchY;
+
+        private void MoveTowards(Vector3 targetPosition, float dt)
+        {
+            Vector3 flatDir = targetPosition - transform.position;
+            flatDir.y = 0f;
+            if (flatDir.sqrMagnitude > 0.0001f)
+            {
+                Quaternion desired = Quaternion.LookRotation(flatDir.normalized, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, desired, rotationSpeed * dt);
+            }
+
+            Vector3 currentPosition = transform.position;
+            Vector3 currentXZ = new(currentPosition.x, 0f, currentPosition.z);
+            Vector3 targetXZ = new(targetPosition.x, 0f, targetPosition.z);
+            Vector3 nextXZ = Vector3.MoveTowards(currentXZ, targetXZ, effectiveSpeed * dt);
+
+            float nextY = ResolveWalkingGroundY(nextXZ, targetPosition, currentPosition.y);
+            Vector3 nextPosition = new(nextXZ.x, nextY, nextXZ.z);
+
+            distanceTravelled += Vector3.Distance(currentPosition, nextPosition);
+            transform.position = nextPosition;
+        }
+
+        private float ResolveWalkingGroundY(Vector3 nextXZ, Vector3 targetPosition, float currentY)
+        {
+            if (groundEveryTick)
+                return ResolveGroundY(nextXZ, currentY);
+            if (IsOnFlatStretch(targetPosition, currentY))
+                return flatStretchY;
+            return groundThisTick ? ResolveGroundY(nextXZ, currentY) : currentY;
+        }
+
+        private bool IsOnFlatStretch(Vector3 targetPosition, float currentY)
+        {
+            int to = pathIndex < pathLength ? path[pathIndex] : -1;
+            if (currentNode == flatStretchFrom && to == flatStretchTo)
+                return flatStretch;
+
+            flatStretchFrom = currentNode;
+            flatStretchTo = to;
+            flatStretch = false;
+            if (currentNode < 0 || to < 0 || IsKerbNode(currentNode) || IsKerbNode(to))
+                return false;
+
+            using var _ = PedestrianManager.GroundingMarker.Auto();
+            Vector3 here = transform.position;
+            if (!CastGround(new Vector3(here.x, currentY, here.z), out RaycastHit start)
+                || !CastGround(targetPosition, out RaycastHit end))
+                return false;
+
+            flatStretch = start.collider == end.collider
+                          && start.normal.y >= FlatNormalY
+                          && end.normal.y >= FlatNormalY
+                          && Mathf.Abs(start.point.y - end.point.y) <= FlatHeightTolerance;
+            flatStretchY = start.point.y;
+            return flatStretch;
+        }
+
+        private bool IsKerbNode(int node)
+        {
+            PedestrianNodeKind kind = network.GetNode(node).Kind;
+            return kind == PedestrianNodeKind.Curb || kind == PedestrianNodeKind.Crossing;
+        }
+
+        private bool CastGround(Vector3 position, out RaycastHit hit)
+        {
+            Vector3 origin = new(position.x, position.y + GroundRayUpOffset, position.z);
+            return Physics.Raycast(origin, Vector3.down, out hit, GroundRayUpOffset + GroundRayDownDistance, groundMask, QueryTriggerInteraction.Ignore);
+        }
+
+        private float ResolveGroundY(Vector3 xz, float fallbackY)
+        {
+            using var _ = PedestrianManager.GroundingMarker.Auto();
+            Vector3 origin = new(xz.x, fallbackY + GroundRayUpOffset, xz.z);
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, GroundRayUpOffset + GroundRayDownDistance, groundMask, QueryTriggerInteraction.Ignore))
+            {
+                return hit.point.y;
+            }
+
+            return fallbackY;
+        }
+    }
+}

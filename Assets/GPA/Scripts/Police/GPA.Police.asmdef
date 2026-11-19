@@ -1,0 +1,14 @@
+{
+    "name": "GPA.Police",
+    "rootNamespace": "GPA.Police",
+    "references": ["GPA.Core", "GPA.Input", "GPA.TopDown2D", "GPA.Records", "Unity.InputSystem"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,19 @@
+{
+    "name": "GPA.Minimap",
+    "rootNamespace": "GPA.Minimap",
+    "references": [
+        "GPA.Core",
+        "GPA.Records",
+        "GPA.TopDown2D",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

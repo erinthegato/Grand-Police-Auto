@@ -1,0 +1,16 @@
+Avenue modules found: 120
+01_curb_corner_close: cam (-116.20, 1.00, -179.20) -> (-114.00, 0.10, -177.00)
+01_curb_corner_wide: cam (-120.00, 2.60, -183.00) -> (-114.00, 0.10, -177.00)
+01_curb_side_lowangle: cam (-115.50, 0.45, -138.00) -> (-114.00, 0.10, -133.00)
+02_former_band_close: cam (-119.00, 1.40, -163.50) -> (-123.00, 0.00, -163.50)
+02_former_band_topdown: cam (-122.99, 7.00, -163.50) -> (-123.00, 0.00, -163.50)
+Band module: City/Streets/5thAve_Tile_000_0
+03_end_seam_close: cam (-119.50, 1.30, -160.50) -> (-123.00, 0.00, -162.00)
+03_end_seam_driver: cam (-121.50, 1.20, -172.00) -> (-123.00, 0.00, -156.00)
+End seam: City/Streets/5thAve_Tile_000_0 | City/Streets/5thAve_Tile_001_0
+04_side_seam_close: cam (-119.50, 1.40, -167.00) -> (-120.00, 0.00, -171.00)
+04_side_seam_topdown: cam (-120.00, 6.00, -170.99) -> (-120.00, 0.00, -171.00)
+Side seam: City/Streets/5thAve_Tile_000_0 | City/Streets/5thAve_Tile_000_1
+05_intersection_approach_driver: cam (-123.00, 1.20, -166.00) -> (-123.00, 0.00, -188.00)
+05_intersection_join_close: cam (-120.00, 1.30, -177.00) -> (-123.00, 0.00, -180.00)
+Intersection approach: City/Streets/5thAve_Tile_000_0 end at (-123.00, 0.00, -180.00)

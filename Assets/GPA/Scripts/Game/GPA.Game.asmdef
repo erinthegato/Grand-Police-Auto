@@ -1,0 +1,19 @@
+{
+    "name": "GPA.Game",
+    "rootNamespace": "GPA.Game",
+    "references": [
+        "GPA.Core",
+        "GPA.TopDown2D",
+        "GPA.Callouts",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

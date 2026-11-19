@@ -1,0 +1,41 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261118061108
+Username: MININT-O8NMA5O\joshy
+RunAs User: MININT-O8NMA5O\joshy
+Configuration Name: 
+Machine: MININT-O8NMA5O (Microsoft Windows NT 10.0.19045.0)
+Host Application: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/Users/joshy/Grand Police Auto/Assets\McpSetup~\diag.ps1
+Process ID: 11000
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Source entry: C:\Users\joshy\AppData\Local\Unity\bin\unity.exe | args: mcp | --tool-groups | --project-path | C:\Users\joshy\Grand Police Auto
+WROTE C:\Users\joshy\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json
+{
+    "mcpServers":  {
+                       "unity":  {
+                                     "command":  "C:\\Users\\joshy\\AppData\\Local\\Unity\\bin\\unity.exe",
+                                     "args":  [
+                                                  "mcp",
+                                                  "--tool-groups",
+                                                  "--project-path",
+                                                  "C:\\Users\\joshy\\Grand Police Auto"
+                                              ]
+                                 }
+                   }
+}
+roaming: C:\Users\joshy\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude
+roaming: C:\Users\joshy\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Microsoft
+roaming: C:\Users\joshy\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\.user-data-ids.claude_pzs8sxrjxfjjc
+FIX COMPLETE
+**********************
+Windows PowerShell transcript end
+End time: 20261118061108
+**********************

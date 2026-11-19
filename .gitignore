@@ -1,0 +1,78 @@
+# Unity project .gitignore
+# Generated for the Grand Police Auto Unity 6 project.
+# Rule of thumb: never ignore *.meta files, and always ignore generated folders.
+
+# ---- Unity generated ----
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Asset Store downloads and imported packages
+/[Aa]ssets/AssetStoreTools*
+/[Aa]ssets/Plugins/Editor/JetBrains*
+
+# Crash-recovery scenes (Unity writes these after an editor crash; real scenes live in Assets/GPA/Scenes)
+/[Aa]ssets/_Recovery/
+
+# Local preview captures from play-mode verification
+/Previews/
+
+# ---- Visual Studio / Rider / VS Code ----
+.vs/
+.idea/
+.vscode/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# ---- Unity Version Control (Plastic) bookkeeping; git is the source of truth here ----
+/.plastic/
+
+# ---- OS clutter ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Build output / packages ----
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+/[Ee]xportedObj/
+
+# ---- Blender backups (the .blend and .fbx sources themselves are tracked) ----
+*.blend1
+*.blend2
+
+# ---- Unity Addressables build output ----
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# ---- Misc ----
+sysinfo.txt
+*.tmp
+
+# ---- AI generation cache (raw downloads; the songs used in-game live in Assets/GPA/Resources/Music) ----
+/GeneratedAssets/
+/Assets/GPA/Audio/Music/
+/Assets/GPA/Audio/Music.meta

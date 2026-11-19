@@ -1,0 +1,29 @@
+{
+    "name": "GPA.Editor",
+    "rootNamespace": "GPA.EditorTools",
+    "references": [
+        "GPA.Core",
+        "GPA.Vehicles",
+        "GPA.Input",
+        "GPA.TopDown2D",
+        "GPA.Callouts",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.2D.Runtime",
+        "GPA.Records",
+        "GPA.Police",
+        "GPA.MDT",
+        "GPA.Minimap",
+        "GPA.Radio"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

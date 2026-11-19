@@ -1,0 +1,19 @@
+{
+    "name": "GPA.TopDown2D",
+    "rootNamespace": "GPA.TopDown2D",
+    "references": [
+        "GPA.Core",
+        "GPA.Input",
+        "GPA.Vehicles",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

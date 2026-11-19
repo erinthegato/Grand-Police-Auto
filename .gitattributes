@@ -1,0 +1,125 @@
+# Unity .gitattributes for Grand Police Auto
+#
+# Unity serializes scenes, prefabs and most assets as YAML text. With these rules
+# Git treats them as text, so they diff line-by-line and merge (instead of the
+# "binary files differ" dead end). Binary media stays binary so Git never attempts
+# to diff or line-ending-convert it.
+
+# Normalize text to LF so Windows and macOS/Linux checkouts agree.
+* text=auto eol=lf
+
+# ---------------------------------------------------------------------------
+# Unity YAML assets: merge as text
+# ---------------------------------------------------------------------------
+# merge=unityyamlmerge hooks up Unity's "Smart Merge" (UnityYAMLMerge) when the
+# driver is configured for the clone:
+#   git config merge.unityyamlmerge.name   "Unity SmartMerge"
+#   git config merge.unityyamlmerge.driver '"<Unity>/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p %O %A %B %L %P'
+# Without that config Git falls back to a plain three-way text merge, which is
+# still correct — the attribute never breaks a merge.
+*.unity                merge=unityyamlmerge eol=lf
+*.prefab               merge=unityyamlmerge eol=lf
+*.asset                merge=unityyamlmerge eol=lf
+*.mat                  merge=unityyamlmerge eol=lf
+*.controller           merge=unityyamlmerge eol=lf
+*.overrideController   merge=unityyamlmerge eol=lf
+*.anim                 merge=unityyamlmerge eol=lf
+*.mask                 merge=unityyamlmerge eol=lf
+*.physicMaterial       merge=unityyamlmerge eol=lf
+*.physicsMaterial2D    merge=unityyamlmerge eol=lf
+*.preset               merge=unityyamlmerge eol=lf
+*.meta                 merge=unityyamlmerge eol=lf
+
+# Other Unity text formats
+*.asmdef               text eol=lf
+*.asmref               text eol=lf
+*.shadergraph          text eol=lf
+*.shadersubgraph       text eol=lf
+*.inputactions         text eol=lf
+*.uxml                 text eol=lf
+*.uss                  text eol=lf
+*.tss                  text eol=lf
+*.json                 text eol=lf
+*.txt                  text eol=lf
+*.md                   text eol=lf
+*.yaml                 text eol=lf
+*.yml                  text eol=lf
+*.xml                  text eol=lf
+*.csv                  text eol=lf
+*.unityproj            text eol=lf
+
+# Shaders and C# sources
+*.shader               text eol=lf
+*.cginc                text eol=lf
+*.hlsl                 text eol=lf
+*.hlsli                text eol=lf
+*.compute              text eol=lf
+*.cs                   text eol=lf diff=csharp
+*.boo                  text eol=lf
+*.js                   text eol=lf
+
+# ---------------------------------------------------------------------------
+# Binary assets: never diff, never convert line endings
+# ---------------------------------------------------------------------------
+*.fbx                  binary
+*.obj                  binary
+*.blend                binary
+*.max                  binary
+*.ma                   binary
+*.mb                   binary
+*.3ds                  binary
+*.dae                  binary
+*.gltf                 binary
+*.glb                  binary
+*.png                  binary
+*.PNG                  binary
+*.jpg                  binary
+*.JPG                  binary
+*.jpeg                 binary
+*.tga                  binary
+*.tif                  binary
+*.tiff                 binary
+*.psd                  binary
+*.exr                  binary
+*.hdr                  binary
+*.HDR                  binary
+*.dds                  binary
+*.wav                  binary
+*.mp3                  binary
+*.ogg                  binary
+*.aiff                 binary
+*.ttf                  binary
+*.otf                  binary
+*.dll                  binary
+*.so                   binary
+*.dylib                binary
+*.bundle               binary
+*.a                    binary
+*.pdf                  binary
+
+# ---------------------------------------------------------------------------
+# Git LFS hook-up (not enabled yet)
+# ---------------------------------------------------------------------------
+# These files are currently stored as ordinary Git blobs. If the repo moves to
+# Git LFS, enable it with a history rewrite BEFORE the first push, e.g.:
+#   git lfs install
+#   git lfs migrate import --include="*.blend,*.fbx,*.png,*.psd,*.hdr,*.wav"
+# Then uncomment the filter lines so newly added binaries go to LFS:
+#
+# *.blend filter=lfs diff=lfs merge=lfs -text
+# *.fbx   filter=lfs diff=lfs merge=lfs -text
+# *.png   filter=lfs diff=lfs merge=lfs -text
+# *.psd   filter=lfs diff=lfs merge=lfs -text
+# *.hdr   filter=lfs diff=lfs merge=lfs -text
+# *.wav   filter=lfs diff=lfs merge=lfs -text
+
+# ---- Git LFS (active) ----
+# Big files live in LFS so they stay under GitHub's 100 MB per-file limit.
+# These lines come last so they override the "binary" / YAML-merge rules above.
+*.wav                                       filter=lfs diff=lfs merge=lfs -text
+*.mp3                                       filter=lfs diff=lfs merge=lfs -text
+*.unity.bak                                 filter=lfs diff=lfs merge=lfs -text
+# The city scene is NOT in LFS on purpose: LFS stores a full ~97 MB copy for every edit, while plain
+# git stores only the changed lines. GitHub refuses single files over 100 MB, so if the scene ever
+# grows past ~100 MB, put this line back (uncommented) to move it into LFS again:
+# Assets/GPA/Scenes/City_Halden*.unity        filter=lfs diff=lfs merge=lfs -text

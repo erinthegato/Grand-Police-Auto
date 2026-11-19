@@ -1,0 +1,14 @@
+{
+    "name": "GPA.HUD",
+    "rootNamespace": "GPA.HUD",
+    "references": ["GPA.Core", "GPA.Input", "Unity.InputSystem", "UnityEngine.UI", "Unity.TextMeshPro"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

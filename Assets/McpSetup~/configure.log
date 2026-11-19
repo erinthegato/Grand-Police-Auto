@@ -1,0 +1,9 @@
+﻿== unity mcp configure claude --project-path "C:\Users\joshy\Grand Police Auto" --yes ==
+Γ£ô Updated Claude Desktop config: C:\Users\joshy\AppData\Roaming\Claude\claude_desktop_config.json
+  Added "unity" MCP server entry.
+  Restart the application to apply changes.
+exit: 0
+== unity status ==
+port	state	project	version	pid
+7801	ready	C:\Users\joshy\Grand Police Auto	6000.6.9f1	51276
+DONE

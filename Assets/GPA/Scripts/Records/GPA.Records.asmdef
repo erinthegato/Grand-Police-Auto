@@ -1,0 +1,14 @@
+{
+    "name": "GPA.Records",
+    "rootNamespace": "GPA.Records",
+    "references": ["GPA.Core", "GPA.TopDown2D"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

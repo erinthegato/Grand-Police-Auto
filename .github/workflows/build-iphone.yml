@@ -1,0 +1,83 @@
+# Builds an unsigned iPhone .ipa for Sideloadly (which signs it with your free Apple ID).
+# Run it from GitHub: Actions tab -> "Build iPhone" -> Run workflow. The .ipa appears under
+# the finished run's "Artifacts". Needs repository secrets UNITY_EMAIL, UNITY_PASSWORD and
+# UNITY_LICENSE (see BUILD-IPHONE.md).
+name: Build iPhone
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export:
+    name: Unity -> Xcode project
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-iOS-
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: iOS
+          buildMethod: GPA.EditorTools.IOSBuild.CloudExport
+          allowDirtyBuild: true
+
+      # tar keeps the Xcode project's executable scripts intact between jobs.
+      - name: Pack Xcode project
+        run: sudo tar -czf xcode.tgz -C Builds/iOS .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xcode-project
+          path: xcode.tgz
+          retention-days: 2
+
+  ipa:
+    name: Xcode -> unsigned .ipa
+    needs: export
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: xcode-project
+
+      - name: Unpack
+        run: mkdir xcode && tar -xzf xcode.tgz -C xcode
+
+      - name: Build (no code signing)
+        working-directory: xcode
+        run: |
+          xcodebuild -project Unity-iPhone.xcodeproj -scheme Unity-iPhone -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -archivePath "$PWD/out/GPA.xcarchive" archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" | tail -n 60
+
+      - name: Package .ipa
+        working-directory: xcode
+        run: |
+          mkdir -p Payload
+          cp -R out/GPA.xcarchive/Products/Applications/*.app Payload/
+          zip -qry ../GrandPoliceAuto.ipa Payload
+          ls -lh ../GrandPoliceAuto.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrandPoliceAuto-iPhone
+          path: GrandPoliceAuto.ipa
+          retention-days: 14

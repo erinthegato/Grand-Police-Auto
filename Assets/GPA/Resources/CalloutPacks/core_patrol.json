@@ -1,0 +1,401 @@
+{
+    "name": "Core Patrol",
+    "author": "Grand Police Auto",
+    "version": "1.0",
+    "callouts": [
+        {
+            "id": "core.suspicious_person",
+            "title": "Suspicious Person",
+            "code": "10-37",
+            "type": "suspicious_person",
+            "description": "Caller reports someone looking into parked cars.",
+            "dispatch": [
+                "Male in a dark jacket checking car door handles, {sector}.",
+                "Caller is anonymous."
+            ],
+            "priority": 1,
+            "weight": 1.2,
+            "fleeChance": 0.35,
+            "offenceChance": 0.3
+        },
+        {
+            "id": "core.erratic_person",
+            "title": "Person Acting Erratically",
+            "code": "10-54",
+            "type": "suspicious_person",
+            "description": "Individual shouting at passers-by.",
+            "dispatch": [
+                "Subject yelling at pedestrians on the sidewalk, {sector}.",
+                "No weapons seen."
+            ],
+            "priority": 2,
+            "weight": 0.8,
+            "fleeChance": 0.2,
+            "offenceChance": 0.45
+        },
+        {
+            "id": "core.loitering",
+            "title": "Loitering Complaint",
+            "code": "10-37",
+            "type": "suspicious_person",
+            "description": "Store owner wants someone moved along.",
+            "dispatch": [
+                "Complainant says the subject has been outside the store for an hour, {sector}."
+            ],
+            "priority": 1,
+            "weight": 0.9,
+            "fleeChance": 0.1,
+            "offenceChance": 0.15
+        },
+        {
+            "id": "core.stolen_vehicle",
+            "title": "Stolen Vehicle Located",
+            "code": "10-16",
+            "type": "stolen_vehicle",
+            "description": "LPR hit on a reported stolen car.",
+            "dispatch": [
+                "Plate reader hit, {vehicle}, plate {plate}, reported stolen.",
+                "Last seen {sector}. Approach with caution."
+            ],
+            "priority": 3,
+            "weight": 1.0,
+            "minDistance": 70,
+            "maxDistance": 160,
+            "fleeChance": 0.4
+        },
+        {
+            "id": "core.carjacking",
+            "title": "Carjacking Suspect",
+            "code": "10-30",
+            "type": "stolen_vehicle",
+            "description": "Vehicle taken at gunpoint, suspect still driving it.",
+            "dispatch": [
+                "Armed carjacking, suspect fled in a {vehicle}, plate {plate}.",
+                "Vehicle spotted {sector}. Suspect may be armed."
+            ],
+            "priority": 3,
+            "weight": 0.6,
+            "minDistance": 80,
+            "maxDistance": 170,
+            "fleeChance": 0.6
+        },
+        {
+            "id": "core.collision",
+            "title": "Motor Vehicle Collision",
+            "code": "10-53",
+            "type": "traffic_collision",
+            "description": "Two-car collision blocking a lane.",
+            "dispatch": [
+                "Two vehicles involved, {sector}.",
+                "Caller reports no injuries."
+            ],
+            "priority": 2,
+            "weight": 1.0,
+            "offenceChance": 0.25
+        },
+        {
+            "id": "core.collision_dwi",
+            "title": "Collision, Possible DWI",
+            "code": "10-53",
+            "type": "traffic_collision",
+            "description": "Caller says one driver can barely stand.",
+            "dispatch": [
+                "Collision, {sector}. Witness says one driver appears intoxicated."
+            ],
+            "priority": 2,
+            "weight": 0.5,
+            "offenceChance": 0.85
+        },
+        {
+            "id": "core.domestic",
+            "title": "Domestic Disturbance",
+            "code": "10-16",
+            "type": "indoor_call",
+            "description": "Neighbours report shouting and something breaking.",
+            "dispatch": [
+                "Domestic in progress, {address}, {building}.",
+                "{floor}, {apt}. Caller hears shouting and glass breaking."
+            ],
+            "priority": 3,
+            "weight": 1.0,
+            "minDistance": 60,
+            "maxDistance": 220,
+            "fleeChance": 0.15,
+            "offenceChance": 0.55,
+            "buildingType": "apartment",
+            "roomKind": "unit",
+            "lockedChance": 0.35,
+            "complainant": true,
+            "complainantLine": "Complainant: \"He's been drinking all day. He threw a glass at me.\""
+        },
+        {
+            "id": "core.noise",
+            "title": "Noise Complaint",
+            "code": "10-94",
+            "type": "indoor_call",
+            "description": "Loud music late at night.",
+            "dispatch": [
+                "Noise complaint, {address}.",
+                "Loud music from {apt}, {floor}."
+            ],
+            "priority": 1,
+            "weight": 0.9,
+            "minDistance": 60,
+            "maxDistance": 220,
+            "fleeChance": 0.05,
+            "offenceChance": 0.1,
+            "buildingType": "apartment",
+            "roomKind": "unit",
+            "lockedChance": 0.1
+        },
+        {
+            "id": "core.welfare_check",
+            "title": "Welfare Check",
+            "code": "10-48",
+            "type": "indoor_call",
+            "description": "Family can't reach an elderly resident.",
+            "dispatch": [
+                "Welfare check, {address}, {floor}, {apt}.",
+                "Family hasn't heard from the resident in two days."
+            ],
+            "priority": 2,
+            "weight": 0.7,
+            "minDistance": 60,
+            "maxDistance": 220,
+            "fleeChance": 0.0,
+            "offenceChance": 0.0,
+            "buildingType": "apartment",
+            "roomKind": "unit",
+            "lockedChance": 0.8
+        },
+        {
+            "id": "core.office_alarm",
+            "title": "Burglary Alarm",
+            "code": "10-31",
+            "type": "indoor_call",
+            "description": "Silent alarm tripped after hours.",
+            "dispatch": [
+                "Silent alarm, {building}, {address}.",
+                "Motion sensor in {apt}, {floor}."
+            ],
+            "priority": 3,
+            "weight": 0.7,
+            "minDistance": 60,
+            "maxDistance": 220,
+            "fleeChance": 0.5,
+            "offenceChance": 0.8,
+            "buildingType": "office",
+            "roomKind": "office",
+            "lockedChance": 0.5
+        },
+        {
+            "id": "core.shoplifter",
+            "title": "Shoplifter in Custody",
+            "code": "10-31",
+            "type": "indoor_call",
+            "description": "Store security holding a shoplifter.",
+            "dispatch": [
+                "Store security holding a shoplifter, {address}.",
+                "Suspect is on {apt}."
+            ],
+            "priority": 1,
+            "weight": 0.8,
+            "minDistance": 60,
+            "maxDistance": 220,
+            "fleeChance": 0.3,
+            "offenceChance": 0.9,
+            "buildingType": "shop",
+            "roomKind": "sales",
+            "lockedChance": 0.0,
+            "complainant": true,
+            "complainantLine": "Security guard: \"Caught them putting razors in their coat. About sixty dollars' worth.\""
+        },
+        {
+            "id": "core.robbery",
+            "title": "Robbery in Progress",
+            "code": "10-31",
+            "type": "indoor_call",
+            "description": "Clerk hit the panic button.",
+            "dispatch": [
+                "Robbery in progress, {building}, {address}.",
+                "Suspect still inside on {apt}. Clerk reports a weapon was shown."
+            ],
+            "priority": 3,
+            "weight": 0.6,
+            "minDistance": 60,
+            "maxDistance": 200,
+            "fleeChance": 0.6,
+            "offenceChance": 0.95,
+            "buildingType": "shop",
+            "roomKind": "sales",
+            "lockedChance": 0.0,
+            "complainant": true,
+            "complainantLine": "Clerk: \"He took the till and said he had a gun. He's still back there!\""
+        },
+        {
+            "id": "core.assault",
+            "title": "Assault Just Occurred",
+            "code": "10-34",
+            "type": "suspicious_person",
+            "description": "Fight on the sidewalk, one party left.",
+            "dispatch": [
+                "Assault just occurred, {sector}.",
+                "Suspect described as wearing a grey hoodie, on foot."
+            ],
+            "priority": 2,
+            "weight": 0.8,
+            "fleeChance": 0.45,
+            "offenceChance": 0.8
+        },
+        {
+            "id": "core.weapons_complaint",
+            "title": "Person With a Weapon",
+            "code": "10-32",
+            "type": "suspicious_person",
+            "description": "Caller saw a gun in someone's waistband.",
+            "dispatch": [
+                "Man with a gun, {sector}.",
+                "Caller saw a handgun in his waistband. Use caution."
+            ],
+            "priority": 3,
+            "weight": 0.5,
+            "fleeChance": 0.5,
+            "offenceChance": 0.7
+        },
+        {
+            "id": "core.wanted_person",
+            "title": "Wanted Person Spotted",
+            "code": "10-29",
+            "type": "suspicious_person",
+            "description": "Citizen recognised someone with a warrant.",
+            "dispatch": [
+                "Caller recognises a subject with an active warrant, {sector}."
+            ],
+            "priority": 2,
+            "weight": 0.6,
+            "fleeChance": 0.55,
+            "offenceChance": 1.0
+        },
+        {
+            "id": "core.reckless_driver",
+            "title": "Reckless Driver",
+            "code": "10-50",
+            "type": "stolen_vehicle",
+            "description": "Car weaving through traffic at speed.",
+            "dispatch": [
+                "Reckless driver, {vehicle}, plate {plate}.",
+                "Last seen {sector}, weaving across lanes."
+            ],
+            "priority": 2,
+            "weight": 0.7,
+            "minDistance": 70,
+            "maxDistance": 160,
+            "fleeChance": 0.35
+        },
+        {
+            "id": "core.dui",
+            "title": "Possible DUI",
+            "code": "10-55",
+            "type": "stolen_vehicle",
+            "description": "Driver swerving, caller following.",
+            "dispatch": [
+                "Possible DUI, {vehicle}, plate {plate}.",
+                "Swerving across the centre line, {sector}."
+            ],
+            "priority": 2,
+            "weight": 0.6,
+            "minDistance": 70,
+            "maxDistance": 160,
+            "fleeChance": 0.2
+        },
+        {
+            "id": "core.air_pursuit",
+            "title": "Air Support: Vehicle Pursuit",
+            "code": "10-80",
+            "type": "air_pursuit",
+            "requires": "helicopter",
+            "description": "Ground units lost a fleeing car; air unit requested.",
+            "dispatch": [
+                "Air unit, ground units are in pursuit of a {vehicle}, plate {plate}.",
+                "Last seen {sector}. Request eyes in the sky."
+            ],
+            "priority": 3,
+            "weight": 1.0,
+            "minDistance": 120,
+            "maxDistance": 320,
+            "offenceChance": 0.6
+        },
+        {
+            "id": "core.air_search",
+            "title": "Air Support: Suspect Search",
+            "code": "10-80",
+            "type": "air_search",
+            "requires": "helicopter",
+            "description": "Burglary suspect fled on foot and is hiding.",
+            "dispatch": [
+                "Air unit, burglary suspect fled on foot, {sector}.",
+                "Search the area and light him up for ground units."
+            ],
+            "priority": 2,
+            "weight": 1.0,
+            "minDistance": 120,
+            "maxDistance": 320
+        },
+        {
+            "id": "core.swat_barricade",
+            "title": "SWAT: Barricaded Suspect",
+            "code": "10-99",
+            "type": "swat_barricade",
+            "requiredLevel": 7,
+            "description": "Armed suspect barricaded inside after shots were fired.",
+            "dispatch": [
+                "SWAT call-out: armed suspect barricaded inside {building}, {address}.",
+                "Last seen on the {floor}. Set up a perimeter and wait for the team."
+            ],
+            "priority": 3,
+            "weight": 0.8,
+            "minDistance": 80,
+            "maxDistance": 260,
+            "fleeChance": 0.35,
+            "buildingType": "apartment,office"
+        },
+        {
+            "id": "core.swat_warehouse",
+            "title": "SWAT: Armed Robbery Crew",
+            "code": "10-99",
+            "type": "swat_barricade",
+            "requiredLevel": 7,
+            "description": "Robbery crew holed up in a warehouse in Eastport.",
+            "dispatch": [
+                "SWAT call-out: armed robbery crew holed up in a warehouse, {address}.",
+                "Set up the perimeter. Team is being assembled."
+            ],
+            "priority": 3,
+            "weight": 0.6,
+            "minDistance": 80,
+            "maxDistance": 400,
+            "fleeChance": 0.5,
+            "buildingType": "warehouse"
+        },
+        {
+            "id": "core.port_theft",
+            "title": "Cargo Theft",
+            "code": "10-31",
+            "type": "indoor_call",
+            "description": "Night guard reports people inside a warehouse.",
+            "dispatch": [
+                "Possible cargo theft in progress, {building}, {address}.",
+                "Guard reports people moving around inside."
+            ],
+            "priority": 2,
+            "weight": 0.6,
+            "minDistance": 60,
+            "maxDistance": 400,
+            "fleeChance": 0.5,
+            "offenceChance": 0.8,
+            "buildingType": "warehouse",
+            "roomKind": "stock",
+            "lockedChance": 0.3
+        }
+    ]
+}

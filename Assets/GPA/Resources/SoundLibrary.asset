@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef9cfab541ba04e45912b3b1b986a620, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: GPA.TopDown2D::GPA.TopDown2D.SoundLibrary
+  Pistol:
+  - {fileID: 8300000, guid: 1faabdcaeb6388c4e8196ea1de0e7374, type: 3}
+  Rifle:
+  - {fileID: 8300000, guid: db9b106539ec98b40abfb7181d453738, type: 3}
+  Shotgun: {fileID: 8300000, guid: 534265a8b47ec944697796f7591c0dcc, type: 3}
+  EmptyClick: {fileID: 8300000, guid: 387816a5c18a80246878b94ddb33922f, type: 3}
+  Reload: {fileID: 8300000, guid: 35a18597833f4ee47b1137d2040e84c4, type: 3}
+  TaserReload: {fileID: 8300000, guid: bb9dc66f90d7ba74e91d7a131b499943, type: 3}
+  Draw: {fileID: 8300000, guid: 65a48f9e3c0203643ace20c46d304e5f, type: 3}
+  BulletImpact: {fileID: 8300000, guid: 22af49bb3ce317c42b9be41f431d19f0, type: 3}
+  TaserFire:
+  - {fileID: 8300000, guid: 65733f0d88424ac4d969850243a21d57, type: 3}
+  TaserArc:
+  - {fileID: 8300000, guid: b051505a9f84d2d45bdf51bc844a35ce, type: 3}
+  BatonHit: {fileID: 8300000, guid: 933e299a678e29e4ba55d69aebcdd0ef, type: 3}
+  PepperSpray: {fileID: 8300000, guid: 5402d99100f6267478ae612779bf560d, type: 3}
+  Handcuffs: {fileID: 8300000, guid: 75a6fe8f921597f4a8d3d8640d181612, type: 3}
+  Footsteps: {fileID: 8300000, guid: 9e476bceb5ac19140a7c1e56f78b8035, type: 3}
+  PedPain: {fileID: 8300000, guid: 5ecf254b762769b4bbcd349c5c022385, type: 3}
+  Engine: {fileID: 8300000, guid: 0fb5b6c6b54fb9540b5365950f1e4238, type: 3}
+  Skid: {fileID: 8300000, guid: 3123f03347d8ecc40a827da83201964e, type: 3}
+  Crash: {fileID: 8300000, guid: c9e7b418e663d8446822afa9c1847f2c, type: 3}
+  Door: {fileID: 8300000, guid: e53b051ff046c1b4f9dfa96fd05057b5, type: 3}
+  CivilianHorn: {fileID: 8300000, guid: fa536ab86a6ad5c48a96af81a9bda431, type: 3}
+  PoliceHorn: {fileID: 8300000, guid: 31cf02f9d6f47f747b8ffd1756598a1c, type: 3}
+  SirenWail: {fileID: 8300000, guid: 80c884e618272ec419d0cc73cfb16c8d, type: 3}
+  SirenYelp: {fileID: 8300000, guid: 571d0f1395507354a8e908f3cbee35a7, type: 3}
+  SirenPriority: {fileID: 8300000, guid: 2998804acd56f724b948e3ef5166b10f, type: 3}
+  CityAmbience: {fileID: 8300000, guid: 8b6fe0db9f05463409a2b29b7028bad9, type: 3}
+  RadioChirp: {fileID: 8300000, guid: 56920c3296815a944bb56aba27e75699, type: 3}
+  RadioStatic: {fileID: 8300000, guid: b755879f1a35df94785cc9d431987c2b, type: 3}
+  UiClick: {fileID: 8300000, guid: f7e62df04b5988e4e87d9fe457179c1d, type: 3}

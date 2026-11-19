@@ -1,0 +1,16 @@
+{
+    "codes": [
+        { "key": "available",      "code": "10-8" },
+        { "key": "en_route",       "code": "10-76" },
+        { "key": "on_scene",       "code": "10-97" },
+        { "key": "traffic_stop",   "code": "10-38" },
+        { "key": "busy",           "code": "10-6" },
+        { "key": "out_of_service", "code": "10-7" },
+        { "key": "backup",         "code": "10-78" },
+        { "key": "emergency",      "code": "10-33" },
+        { "key": "code4",          "code": "Code 4" },
+        { "key": "copy",           "code": "10-4" },
+        { "key": "pursuit",        "code": "10-80" },
+        { "key": "arrest",         "code": "10-15" }
+    ]
+}
