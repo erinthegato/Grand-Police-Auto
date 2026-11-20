@@ -105,9 +105,15 @@ namespace GPA.Callouts
             if (player is Officer2D officer && !string.IsNullOrEmpty(officer.InteractPrompt))
             {
                 // Phones: just under the officer, clear of the radio log in the bottom-left.
-                Rect r = UiScale.Handheld ? new Rect(w * 0.5f - Mathf.Min(450, w * 0.5f - 20), h * 0.5f + 50, Mathf.Min(900, w - 40), 46) : new Rect(w * 0.5f - 200, h - 120, 400, 46);
+                // The box grows to fit long prompts ("Enter 1st Precinct — Harbor Point (380 Exchange Pl)").
+                string prompt = $"[{Key("E", "A")}] {officer.InteractPrompt}";
+                GUIStyle style = Centered(_title);
+                var content = new GUIContent(prompt);
+                float bw = UiScale.Handheld ? Mathf.Min(900, w - 40) : Mathf.Clamp(style.CalcSize(content).x + 48f, 400f, w - 40f);
+                float bh = Mathf.Max(46f, style.CalcHeight(content, bw - 24f) + 12f);
+                Rect r = UiScale.Handheld ? new Rect(w * 0.5f - bw * 0.5f, h * 0.5f + 50, bw, bh) : new Rect(w * 0.5f - bw * 0.5f, h - 74f - bh, bw, bh);
                 Box(r);
-                GUI.Label(r, $"[{Key("E", "A")}] {officer.InteractPrompt}", Centered(_title));
+                GUI.Label(new Rect(r.x + 12f, r.y, r.width - 24f, r.height), prompt, style);
             }
             if (player?.CurrentVehicle is Car2D car)
             {

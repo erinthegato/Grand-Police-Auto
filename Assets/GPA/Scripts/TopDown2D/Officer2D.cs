@@ -80,7 +80,13 @@ namespace GPA.TopDown2D
         /// Never raised while the officer is inside a vehicle: you can't be hurt in a car.</summary>
         public static event System.Action<DamageInfo> Damaged;
         public bool IsAlive => true;
-        public void ApplyDamage(in DamageInfo info) { if (_car == null) Damaged?.Invoke(info); }
+        public void ApplyDamage(in DamageInfo info)
+        {
+            if (_car != null) return;
+            if (info.Type == DamageType.Bullet || info.Type == DamageType.Melee)
+                BloodFx2D.Spray(info.Point, info.Direction, info.Type == DamageType.Bullet ? 8 : 3, info.Type == DamageType.Bullet ? 1f : 0.5f);
+            Damaged?.Invoke(info);
+        }
         public bool IsSprinting { get; private set; }
         /// <summary>Sprint is a toggle: press to run, press again (or stop / run out of stamina) to walk.</summary>
         private bool _sprintToggled;

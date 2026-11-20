@@ -78,7 +78,7 @@ namespace GPA.Mdt
             var cars = new List<VehicleRecord>();
             foreach (string id in r.VehicleIds) { var v = db.GetVehicle(id); if (v != null) cars.Add(v); }
 
-            DateTime when = stop?.Time ?? (DateTime.TryParse(r.Created, out var created) ? created : DateTime.Now);
+            DateTime when = stop?.Time ?? (DateTime.TryParse(r.Created, out var created) ? created : GameClock.Now);
             string officer = string.IsNullOrEmpty(r.Officer) ? "the reporting officer" : r.Officer;
             string location = string.IsNullOrWhiteSpace(r.Location) ? stop?.Location : r.Location;
             string at = string.IsNullOrWhiteSpace(location) ? "" : $" at {location}";
@@ -270,7 +270,7 @@ namespace GPA.Mdt
         private static int Age(string dob)
         {
             if (!DateTime.TryParse(dob, out var d)) return 0;
-            var today = DateTime.Today;
+            var today = GameClock.Now.Date;   // ages in the game's year
             int age = today.Year - d.Year;
             if (today < d.AddYears(age)) age--;
             return age;

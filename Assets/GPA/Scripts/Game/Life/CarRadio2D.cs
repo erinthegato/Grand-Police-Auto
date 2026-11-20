@@ -35,6 +35,7 @@ namespace GPA.Game
             new Station { Name = "Pulse 174", Tagline = "drum & bass, all night", Style = MusicSynth.Style.DrumAndBass },
             new Station { Name = "Club Halden 101.9", Tagline = "electronic & house", Style = MusicSynth.Style.House },
             new Station { Name = "Wobble FM", Tagline = "dubstep and bass music", Style = MusicSynth.Style.Dubstep },
+            new Station { Name = "HYPER 177", Tagline = "futurecore: hardcore meets future bass", Style = MusicSynth.Style.Futurecore },
             new Station { Name = "Halden Classical 89.5", Tagline = "the classics, beautifully played", Style = MusicSynth.Style.Classical },
             new Station { Name = "KHLD Talk 880", Tagline = "news, traffic and weather", Style = null },
         };
@@ -66,6 +67,7 @@ namespace GPA.Game
             { "house_1", "Warehouse 4AM — Club Halden Allstars" }, { "house_2", "Skyline Rush — Prism Kids" }, { "house_3", "Deep Harbor — Velvet Room" },
             { "dubstep_1", "Grinder — Wobble Unit" }, { "dubstep_2", "Fallen Skyline — Bass Cartel" }, { "dubstep_3", "Riot Gear — Subzero" },
             { "classical_1", "Symphonic Movement in E-flat — Halden Philharmonic" }, { "classical_2", "Harbor Overture — Halden Chamber Players" }, { "classical_3", "Guitar Concerto in E minor — Halden Strings" },
+            { "futurecore_1", "Starlight Overdrive — Kawaii Riot" }, { "futurecore_2", "Siren Heart — Neon Dispatch" }, { "futurecore_3", "Code Pink (Hyper Mix) — Prism Unit" },
         };
 
         public static CarRadio2D Instance { get; private set; }

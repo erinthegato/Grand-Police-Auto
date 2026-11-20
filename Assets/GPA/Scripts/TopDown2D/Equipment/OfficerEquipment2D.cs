@@ -406,7 +406,7 @@ namespace GPA.TopDown2D
                 Vector2 end = hit.collider != null ? hit.point : origin + d * range;
                 Tracer(origin, end, new Color(1f, 0.92f, 0.6f, 0.85f), pellets > 1 ? 0.025f : 0.04f, 0.08f);
                 if (i == 0 && hit.collider != null && hit.collider.GetComponentInParent<Ped2D>() == null) GameAudio.PlayAt(GameAudio.Library?.BulletImpact, hit.point, 0.12f);
-                if (hit.collider != null && hit.collider.GetComponentInParent<Ped2D>() is Ped2D ped) ped.Down();
+                if (hit.collider != null && hit.collider.GetComponentInParent<Ped2D>() is Ped2D ped) { BloodFx2D.Spray(hit.point, d, i == 0 ? 12 : 5); ped.Down(); }
             }
             GameEvents.Publish(new GunshotEvent(origin, 70f, gameObject));
             Haptic(pellets > 1 ? 0.8f : 0.45f, 0.6f, pellets > 1 ? 0.18f : 0.09f);
@@ -476,6 +476,7 @@ namespace GPA.TopDown2D
             foreach (var h in Physics2D.RaycastAll(origin, dir, range))
             {
                 if (h.collider == null || h.collider.isTrigger || h.transform.IsChildOf(transform)) continue;
+                if (!Overpass2D.SameLevel(h.collider, this)) continue;   // shots don't hit the road under a bridge, or the bridge from below
                 return h;
             }
             return default;
@@ -492,7 +493,7 @@ namespace GPA.TopDown2D
             foreach (var col in Physics2D.OverlapCircleAll(origin, range))
             {
                 Ped2D ped = col.GetComponentInParent<Ped2D>();
-                if (ped == null) continue;
+                if (ped == null || !Overpass2D.SameLevel(col, this)) continue;
                 Vector2 to = (Vector2)ped.transform.position - origin;
                 if (Vector2.Angle(dir, to) > halfAngle && to.magnitude > 0.6f) continue;
                 RaycastHit2D h = FirstHit(origin, to.normalized, to.magnitude);

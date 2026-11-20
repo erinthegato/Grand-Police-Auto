@@ -34,6 +34,7 @@ namespace GPA.Police
             public readonly HashSet<string> Selected = new HashSet<string>();
             public Car2D Car;                    // back seat of this car, or null when on foot
             public BookingCase Booking;          // what the MDT Booking tab shows, built on demand
+            public CadCall Call;                 // the call the arrest was made on (empty when none)
         }
 
         public static ArrestPipeline2D Instance { get; private set; }
@@ -92,6 +93,7 @@ namespace GPA.Police
             if (!_custody.TryGetValue(ped, out Custody c))
             {
                 c = new Custody { Ped = ped, CitizenId = ped.CitizenId, Location = Locate(ped.transform.position) };
+                if (Services.TryGet(out ICadCallSource cad) && cad.TryGetCurrentCall(out CadCall call) && call.Phase != CalloutPhase.Offered) c.Call = call;
                 _custody[ped] = c;
                 ped.Ambient = false;   // the population manager must not recycle a prisoner
                 var it = ped.GetComponent<Interactable2D>() ?? ped.gameObject.AddComponent<Interactable2D>();
@@ -275,7 +277,7 @@ namespace GPA.Police
         private void Book(Custody c)
         {
             var charges = new List<string>(c.Selected);
-            if (Db != null && !string.IsNullOrEmpty(c.CitizenId)) Db.AddArrest(c.CitizenId, charges, c.Location, _officerName);
+            if (Db != null && !string.IsNullOrEmpty(c.CitizenId)) Db.AddArrest(c.CitizenId, charges, c.Location, _officerName, Unit, _precinctName, c.Call);
             Radio?.Transmit(TransmissionPriority.Routine, $"{Unit}, prisoner booked at {_precinctName}, {charges.Count} charge(s).");
             Booked++;
             GameEvents.Publish(new ArrestBookedEvent(c.CitizenId, charges));
@@ -377,7 +379,8 @@ namespace GPA.Police
                 if (c.Ped == null) continue;
                 bool seated = c.Car != null;
                 Vector2 at = seated ? (Vector2)c.Car.transform.position : (Vector2)c.Ped.transform.position;
-                var p = new SavedPrisoner { citizenId = c.CitizenId, location = c.Location, x = at.x, y = at.y, inCar = seated };
+                var p = new SavedPrisoner { citizenId = c.CitizenId, location = c.Location, x = at.x, y = at.y, inCar = seated,
+                                            callId = c.Call.Id, callCode = c.Call.Code, callTitle = c.Call.Title };
                 p.charges.AddRange(c.Charges);
                 p.selected.AddRange(c.Selected);
                 list.Add(p);
@@ -411,6 +414,7 @@ namespace GPA.Police
                 TakeIntoCustody(ped, p.charges);
                 if (!_custody.TryGetValue(ped, out Custody c)) continue;
                 if (!string.IsNullOrEmpty(p.location)) c.Location = p.location;
+                if (!string.IsNullOrEmpty(p.callId)) c.Call = new CadCall { Id = p.callId, Code = p.callCode, Title = p.callTitle, Location = p.location };
                 c.Selected.Clear();
                 foreach (string s in p.selected) c.Selected.Add(s);
 

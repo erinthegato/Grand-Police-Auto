@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.rlabrecque.steamworks.net": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net#2025.163.0",
     "com.unity.ai.assistant": "2.22.0-pre.1",
     "com.unity.collab-proxy": "2.14.0",
     "com.unity.ide.rider": "3.1.0",

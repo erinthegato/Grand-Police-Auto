@@ -1,4 +1,5 @@
 
+using System.Collections.Generic;
 using GPA.Core;
 using UnityEngine;
 
@@ -42,6 +43,9 @@ namespace GPA.TopDown2D
         /// <summary>Obeyed a "stop" or "get down" command (can be cuffed without a struggle).</summary>
         public bool Compliant { get; private set; }
         private Transform _escort;
+        private Rigidbody2D _escortBody;          // the escorting officer's body: where they're walking, not where they aim
+        private Vector2 _escortBack = Vector2.down; // the side of the officer the prisoner keeps to (last walking direction, reversed)
+        private readonly List<(Collider2D, Collider2D)> _escortIgnored = new List<(Collider2D, Collider2D)>();
         private float _stunTimer;
         private int _strikes;
         private System.IDisposable _gunshotSub;
@@ -84,11 +88,12 @@ namespace GPA.TopDown2D
             _rb.AddForce(direction.normalized * 260f, ForceMode2D.Impulse);
             _strikes++;
             GetComponent<PedPose2D>()?.Flinch(direction);
+            if (Random.value < 0.5f) BloodFx2D.Spray(transform.position, direction, 3, 0.5f);
             bool tough = Profile == Personality.Aggressive || Profile == Personality.Fleeing || Profile == Personality.Uncooperative;
             Stun(_strikes >= (tough ? 3 : 1) ? 4f : 0.6f);
         }
 
-        /// <summary>Shot: down and out of the scene's action (no ragdoll, no gore).</summary>
+        /// <summary>Shot: down and out of the scene's action, with a pool of blood spreading underneath.</summary>
         public void Down()
         {
             if (Current == Mode.Downed) return;
@@ -101,6 +106,7 @@ namespace GPA.TopDown2D
             foreach (var c in GetComponents<Collider2D>()) c.isTrigger = true;
             foreach (var sr in GetComponentsInChildren<SpriteRenderer>()) sr.color = new Color(0.78f, 0.74f, 0.74f, 1f);
             GetComponentInChildren<SpriteAnimator2D>()?.SetFrozen(true);
+            BloodFx2D.Pool(transform.position, Random.Range(2.0f, 2.6f));
         }
 
         /// <summary>Handcuff attempt. Subdued, detained or compliant people are cuffed; others may resist or run.</summary>
@@ -167,20 +173,44 @@ namespace GPA.TopDown2D
             if (!Cuffed) return;
             SetKneeling(false);
             _escort = officer;
+            _escortBody = officer != null ? officer.GetComponentInParent<Rigidbody2D>() : null;
+            _escortBack = officer != null ? -(Vector2)officer.up : Vector2.down;
             Current = Mode.Escorted;
             _rb.bodyType = RigidbodyType2D.Dynamic;
+            // The prisoner is held by the arm: they never bump into (and, being heavier, shove) their officer.
+            IgnoreEscortCollisions(true);
         }
 
         public void StopEscort()
         {
+            IgnoreEscortCollisions(false);
             _escort = null;
+            _escortBody = null;
             if (Cuffed) Detain();
+        }
+
+        private void IgnoreEscortCollisions(bool ignore)
+        {
+            if (!ignore)
+            {
+                foreach (var (a, b) in _escortIgnored) if (a != null && b != null) Physics2D.IgnoreCollision(a, b, false);
+                _escortIgnored.Clear();
+                return;
+            }
+            if (_escort == null) return;
+            foreach (var mine in GetComponentsInChildren<Collider2D>())
+                foreach (var theirs in _escort.GetComponentsInChildren<Collider2D>())
+                {
+                    Physics2D.IgnoreCollision(mine, theirs, true);
+                    _escortIgnored.Add((mine, theirs));
+                }
         }
 
         /// <summary>Uncuffed and let go: back to being an ordinary pedestrian.</summary>
         public void Release()
         {
             Cuffed = false; Subdued = false; Compliant = false;
+            IgnoreEscortCollisions(false);
             _escort = null;
             SetKneeling(false);
             _rb.bodyType = RigidbodyType2D.Dynamic;
@@ -211,7 +241,11 @@ namespace GPA.TopDown2D
             if (Current == Mode.Escorted)
             {
                 if (_escort == null) { StopEscort(); return; }
-                Vector2 spot = (Vector2)_escort.position - (Vector2)_escort.up * 1.1f;
+                // Keep behind the way the officer is walking (they may be aiming anywhere); when they stop,
+                // stay on the same side rather than swinging round to wherever they're aiming.
+                Vector2 officerVel = _escortBody != null ? _escortBody.linearVelocity : Vector2.zero;
+                if (officerVel.sqrMagnitude > 0.5f) _escortBack = Vector2.Lerp(_escortBack, -officerVel.normalized, 8f * Time.fixedDeltaTime).normalized;
+                Vector2 spot = (Vector2)_escort.position + _escortBack * 1.1f;
                 Vector2 to = spot - (Vector2)transform.position;
                 Vector2 want = to.magnitude < 0.3f ? Vector2.zero : to.normalized * Mathf.Min(6f, to.magnitude * 3f);
                 _rb.linearVelocity = Vector2.MoveTowards(_rb.linearVelocity, want, 30f * Time.fixedDeltaTime);

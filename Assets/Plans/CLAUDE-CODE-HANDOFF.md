@@ -1,4 +1,4 @@
-# Grand Police Auto — Claude Code handoff
+# Lights & Sirens: Halden — Claude Code handoff
 
 _Last updated 2026-11-18. Written for the next Claude Code session (or any coding agent)._
 

@@ -219,7 +219,7 @@ namespace GPA.Callouts
 
                 string cross = Services.TryGet(out ILocationService loc) ? $", near {loc.NearestIntersection(scenario.Location)}" : "";
                 _cross = cross;
-                _dispatchedAt = System.DateTime.Now.ToString("HH:mm");
+                _dispatchedAt = GameClock.Now.ToString("HH:mm");
                 _dispatchLines = def.dispatch != null ? Fill(def.dispatch, scenario) : null;
                 _scanner?.Transmit($"Dispatch to {_unit}: {def.title}, {CurrentSector}{cross}. {def.ResponseCode}.");
                 if (_dispatchLines != null) _scanner?.Transmit(_dispatchLines);
@@ -257,7 +257,7 @@ namespace GPA.Callouts
             LastResultSucceeded = success;
             ResultTimeLeft = _resultSeconds;
             _scanner?.Transmit(success ? $"{_unit}, Code 4. {text}" : $"{_unit}, clearing. {text}");
-            _history.Add(BuildCall(success ? CalloutPhase.Completed : CalloutPhase.Failed, text, System.DateTime.Now.ToString("HH:mm")));
+            _history.Add(BuildCall(success ? CalloutPhase.Completed : CalloutPhase.Failed, text, GameClock.Now.ToString("HH:mm")));
 
             StartCoroutine(CleanupLater(Current, _cleanupDelay));
             Current = null;

@@ -87,6 +87,7 @@ namespace GPA.TopDown2D
                 RoadGraph2D.Node from = graph.Nodes[graph.Edges[edge].From];
                 float d = Vector2.Distance(from.Position, player);
                 if (d < _spawnMin || d > _spawnMax || Visible(from.Position)) continue;
+                if (Overpass2D.Covers(from.Position)) continue;   // never spawn on (or under) a bridge
                 if (Physics2D.OverlapCircle(from.Position, 2.6f) != null) continue;   // something already there
 
                 // Draw a registered vehicle from the citizen database when it's available.

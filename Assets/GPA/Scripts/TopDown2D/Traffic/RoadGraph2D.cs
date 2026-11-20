@@ -30,6 +30,7 @@ namespace GPA.TopDown2D
             public bool ThroughJunction;
             public Vector2 Control;      // bezier control for turns (= midpoint when straight)
             public float SpeedLimit;     // m/s for this lane segment; 0 = the normal city speed
+            public float Weight;         // how often traffic picks this edge; 0 = default (3 straight on, 1 turning)
         }
 
         [Serializable]
@@ -93,7 +94,8 @@ namespace GPA.TopDown2D
             for (int i = 0; i < options.Count; i++)
             {
                 float turn = Mathf.Abs(Mathf.DeltaAngle(heading, Nodes[Edges[options[i]].To].Heading));
-                weights[i] = turn < 10f ? 3f : 1f;
+                float w = Edges[options[i]].Weight;
+                weights[i] = w > 0f ? w : turn < 10f ? 3f : 1f;   // e.g. a beltway off-ramp: weight 1 against 3 straight on
                 total += weights[i];
             }
             float roll = UnityEngine.Random.value * total;

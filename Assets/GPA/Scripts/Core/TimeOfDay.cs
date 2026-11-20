@@ -12,6 +12,8 @@ namespace GPA.Core
         float TimeScale { get; set; }
         bool Paused { get; set; }
         void SetTime(float hour);
+        /// <summary>Sets which in-game day it is (0 = the first day), keeping the time of day. Used when loading a save.</summary>
+        void SetDay(int day);
         /// <summary>Fires when the whole hour changes.</summary>
         event Action<int> HourChanged;
         DateTime GameDateTime { get; }
@@ -45,6 +47,8 @@ namespace GPA.Core
             if (before != after) HourChanged?.Invoke(after);
         }
 
+        public void SetDay(int day) => _totalHours = Math.Max(0, day) * 24.0 + Hour;
+
         public void Tick(float unscaledDelta)
         {
             if (Paused) return;
@@ -53,5 +57,18 @@ namespace GPA.Core
             int after = Mathf.FloorToInt(Hour);
             if (before != after) HourChanged?.Invoke(after);
         }
+    }
+
+    /// <summary>
+    /// The in-game date and time, for anything written into records (arrests, citations, reports,
+    /// dispatch logs). Falls back to the real clock only when there is no game clock (e.g. in tests).
+    /// </summary>
+    public static class GameClock
+    {
+        public static DateTime Now => Services.TryGet(out ITimeOfDay clock) ? clock.GameDateTime : DateTime.Now;
+        /// <summary>"yyyy-MM-dd HH:mm", the format records store timestamps in.</summary>
+        public static string Stamp => Now.ToString("yyyy-MM-dd HH:mm");
+        /// <summary>"yyyy-MM-dd".</summary>
+        public static string Today => Now.ToString("yyyy-MM-dd");
     }
 }

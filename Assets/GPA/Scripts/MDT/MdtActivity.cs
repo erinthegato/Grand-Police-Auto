@@ -41,7 +41,7 @@ namespace GPA.Mdt
             _stopSubscription = GameEvents.Subscribe<StopEndedEvent>(OnStopEnded);
             _radioSubscription = GameEvents.Subscribe<DispatchLineEvent>(e =>
             {
-                _radio.Add(new RadioLine(DateTime.Now, e.Priority, e.Text));
+                _radio.Add(new RadioLine(GameClock.Now, e.Priority, e.Text));
                 if (_radio.Count > MaxRadioLines) _radio.RemoveAt(0);
             });
         }
@@ -65,7 +65,7 @@ namespace GPA.Mdt
             string location = "";
             if (Services.TryGet(out ILocationService locations) && Services.TryGet(out IPlayerAvatar player))
                 location = locations.Describe(player.Transform.position);
-            _stops.Insert(0, new StopRecord { Time = DateTime.Now, Outcome = e.Outcome, VehicleId = e.VehicleId, CitizenId = e.CitizenId, Summary = e.Summary, Location = location });
+            _stops.Insert(0, new StopRecord { Time = GameClock.Now, Outcome = e.Outcome, VehicleId = e.VehicleId, CitizenId = e.CitizenId, Summary = e.Summary, Location = location });
             if (_stops.Count > MaxStops) _stops.RemoveAt(_stops.Count - 1);
         }
 

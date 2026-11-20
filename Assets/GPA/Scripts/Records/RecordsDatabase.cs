@@ -218,32 +218,71 @@ namespace GPA.Records
 
         public Citation AddCitation(string citizenId, string vehicleId, string offense, int fine, string location, string officer)
         {
-            var c = new Citation { Id = NextId("CIT"), Date = DateTime.Now.ToString("yyyy-MM-dd HH:mm"), CitizenId = citizenId, VehicleId = vehicleId, Offense = offense, Fine = fine, Location = location, Officer = officer };
+            var c = new Citation { Id = NextId("CIT"), Date = GameClock.Stamp, CitizenId = citizenId, VehicleId = vehicleId, Offense = offense, Fine = fine, Location = location, Officer = officer };
             _data.Citations.Add(c);
             GetCitizen(citizenId)?.CitationIds.Add(c.Id);
             MarkDirty();
             return c;
         }
 
-        public Arrest AddArrest(string citizenId, IEnumerable<string> charges, string location, string officer)
+        public Arrest AddArrest(string citizenId, IEnumerable<string> charges, string location, string officer) =>
+            AddArrest(citizenId, charges, location, officer, null, null, default);
+
+        /// <summary>
+        /// Books an arrest: booking number, each charge classed felony/misdemeanour with bail, the
+        /// arresting unit, the precinct and the call it came from. Adds "Pending" entries to the
+        /// person's criminal history.
+        /// </summary>
+        public Arrest AddArrest(string citizenId, IEnumerable<string> charges, string location, string officer, string unit, string bookedAt, CadCall call)
         {
-            var a = new Arrest { Id = NextId("ARR"), Date = DateTime.Now.ToString("yyyy-MM-dd HH:mm"), CitizenId = citizenId, Location = location, Officer = officer };
+            DateTime now = GameClock.Now;
+            var a = new Arrest { Id = NextId("ARR"), Date = now.ToString("yyyy-MM-dd HH:mm"), CitizenId = citizenId, Location = location, Officer = officer, Unit = unit, BookedAt = bookedAt };
             a.Charges.AddRange(charges);
-            _data.Arrests.Add(a);
+            a.BookingNumber = BookingNumberFor(a);
             var citizen = GetCitizen(citizenId);
+            a.Counts = ChargeBook.ClassifyAll(a.Charges, citizen, out a.TotalBail);
+            if (!string.IsNullOrEmpty(call.Id)) { a.CallId = call.Id; a.CallCode = call.Code; a.CallTitle = call.Title; }
+            _data.Arrests.Add(a);
             if (citizen != null)
             {
                 citizen.ArrestIds.Add(a.Id);
-                foreach (string charge in a.Charges) citizen.CriminalHistory.Add(new HistoryEntry { Date = DateTime.Now.ToString("yyyy-MM-dd"), Offense = charge, Disposition = "Pending" });
+                foreach (string charge in a.Charges) citizen.CriminalHistory.Add(new HistoryEntry { Date = now.ToString("yyyy-MM-dd"), Offense = charge, Disposition = "Pending" });
             }
             MarkDirty();
+            try { ArrestAdded?.Invoke(a); }
+            catch (Exception e) { Debug.LogException(e); }   // a report problem must never undo the booking
             return a;
+        }
+
+        /// <summary>Raised after an arrest is recorded (the police computer files the arrest report).</summary>
+        public static event Action<Arrest> ArrestAdded;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetArrestEvent() => ArrestAdded = null;
+
+        public Arrest GetArrest(string id) => _data == null || id == null ? null : _data.Arrests.Find(a => a.Id == id);
+
+        /// <summary>"B25-000123": the year booked and the arrest number.</summary>
+        public static string BookingNumberFor(Arrest a)
+        {
+            string digits = a.Id != null && a.Id.Length > 4 ? a.Id.Substring(a.Id.Length - 6 < 0 ? 0 : a.Id.Length - 6) : "000000";
+            string yy = a.Date != null && a.Date.Length >= 4 ? a.Date.Substring(2, 2) : "00";
+            return $"B{yy}-{digits}";
+        }
+
+        /// <summary>Links the arrest report written at booking to the arrest.</summary>
+        public void LinkArrestReport(Arrest arrest, IncidentReport report)
+        {
+            if (arrest == null || report == null) return;
+            arrest.ReportId = report.Id;
+            report.ArrestId = arrest.Id;
+            MarkDirty();
         }
 
         public IncidentReport SaveReport(IncidentReport report)
         {
-            if (string.IsNullOrEmpty(report.Id)) { report.Id = NextId("RPT"); report.Created = DateTime.Now.ToString("yyyy-MM-dd HH:mm"); _data.Reports.Add(report); }
-            report.Updated = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            if (string.IsNullOrEmpty(report.Id)) { report.Id = NextId("RPT"); report.Created = GameClock.Stamp; _data.Reports.Add(report); }
+            report.Updated = GameClock.Stamp;
             // Keep each record's IncidentIds in step with who the report names, including people removed on edit.
             foreach (var c in _data.Citizens) if (!report.CitizenIds.Contains(c.Id)) c.IncidentIds.Remove(report.Id);
             foreach (var v in _data.Vehicles) if (!report.VehicleIds.Contains(v.Id)) v.IncidentIds.Remove(report.Id);
@@ -255,7 +294,7 @@ namespace GPA.Records
 
         public Bolo AddBolo(string subject, string reason, string vehicleId = null, string citizenId = null)
         {
-            var b = new Bolo { Id = NextId("BOLO"), Created = DateTime.Now.ToString("yyyy-MM-dd"), Subject = subject, Reason = reason, VehicleId = vehicleId, CitizenId = citizenId };
+            var b = new Bolo { Id = NextId("BOLO"), Created = GameClock.Today, Subject = subject, Reason = reason, VehicleId = vehicleId, CitizenId = citizenId };
             _data.Bolos.Add(b);
             MarkDirty();
             return b;

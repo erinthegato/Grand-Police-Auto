@@ -21,24 +21,24 @@ namespace GPA.EditorTools
             var specs = new List<VehicleSpec>
             {
                 // ---------------- civilian
-                Civ("sedan", "Sedan", 2.3f, 4.6f, 1500, 34, 7.5f, 190, 3f, new[] { "car_sedan_maroon", "car_sedan_gunmetal", "car_sedan_olive" }, new[] { "Red", "Grey", "Green" }, new[] { "Meridian", "Sable", "Crestline" }),
-                Civ("taxi", "Taxi", 2.3f, 4.6f, 1500, 34, 7.5f, 190, 0.5f, new[] { "car_taxi" }, new[] { "Yellow" }, new[] { "Metro Cab" }),
-                Civ("compact", "Compact", 2.0f, 3.5f, 1100, 30, 8f, 210, 1.2f, new[] { "car_compact_red", "car_compact_blue", "car_compact_white", "car_compact_green" }, new[] { "Red", "Blue", "White", "Green" }, new[] { "Pixie", "Zip", "Metro" }),
-                Civ("suv", "SUV", 2.45f, 4.85f, 2100, 32, 7f, 175, 1.6f, new[] { "car_suv_black", "car_suv_silver", "car_suv_blue", "car_suv_white" }, new[] { "Black", "Silver", "Blue", "White" }, new[] { "Trailhead", "Summit", "Ridgeline" }),
-                Civ("pickup", "Pickup Truck", 2.45f, 5.35f, 2300, 31, 6.8f, 170, 1.1f, new[] { "car_pickup_white", "car_pickup_red", "car_pickup_black", "car_pickup_tan" }, new[] { "White", "Red", "Black", "Tan" }, new[] { "Hauler", "Workhorse", "Ranchero" }),
-                Civ("delivery_van", "Delivery Van", 2.6f, 5.7f, 2800, 26, 5.5f, 150, 0.5f, new[] { "van_delivery_white", "van_delivery_brown" }, new[] { "White", "Brown" }, new[] { "Courier Van", "Sprint Cargo" }),
-                Civ("box_truck", "Box Truck", 2.9f, 8.7f, 6500, 22, 4f, 120, 0.3f, new[] { "truck_box_white", "truck_box_yellow" }, new[] { "White", "Yellow" }, new[] { "Box 16", "Cargo Master" }, braking: 18f),
+                T(Civ("sedan", "Sedan", 2.3f, 4.6f, 1500, 34, 7.5f, 190, 3f, new[] { "car_sedan_maroon", "car_sedan_gunmetal", "car_sedan_olive" }, new[] { "Red", "Grey", "Green" }, new[] { "Meridian", "Sable", "Crestline" }), 9.0f, 24f, 9.0f, 0.7f, 1.2f, 0.35f, 0.1f, 3.5f),
+                T(Civ("taxi", "Taxi", 2.3f, 4.6f, 1500, 34, 7.5f, 190, 0.5f, new[] { "car_taxi" }, new[] { "Yellow" }, new[] { "Metro Cab" }), 8.5f, 23f, 8.0f, 0.68f, 1.1f, 0.4f, 0.1f, 3.5f),
+                T(Civ("compact", "Compact", 2.0f, 3.5f, 1100, 30, 8f, 210, 1.2f, new[] { "car_compact_red", "car_compact_blue", "car_compact_white", "car_compact_green" }, new[] { "Red", "Blue", "White", "Green" }, new[] { "Pixie", "Zip", "Metro" }), 9.0f, 23f, 13.0f, 0.8f, 1.4f, 0.5f, 0.0f, 4.0f),
+                T(Civ("suv", "SUV", 2.45f, 4.85f, 2100, 32, 7f, 175, 1.6f, new[] { "car_suv_black", "car_suv_silver", "car_suv_blue", "car_suv_white" }, new[] { "Black", "Silver", "Blue", "White" }, new[] { "Trailhead", "Summit", "Ridgeline" }), 7.8f, 22f, 6.5f, 0.6f, 1.0f, 0.4f, 0.05f, 3.0f),
+                T(Civ("pickup", "Pickup Truck", 2.45f, 5.35f, 2300, 31, 6.8f, 170, 1.1f, new[] { "car_pickup_white", "car_pickup_red", "car_pickup_black", "car_pickup_tan" }, new[] { "White", "Red", "Black", "Tan" }, new[] { "Hauler", "Workhorse", "Ranchero" }), 7.5f, 21f, 6.5f, 0.62f, 0.8f, 0.4f, 0.35f, 3.0f),
+                T(Civ("delivery_van", "Delivery Van", 2.6f, 5.7f, 2800, 26, 5.5f, 150, 0.5f, new[] { "van_delivery_white", "van_delivery_brown" }, new[] { "White", "Brown" }, new[] { "Courier Van", "Sprint Cargo" }), 7.0f, 19f, 5.0f, 0.55f, 1.0f, 0.55f, 0.0f, 2.8f),
+                T(Civ("box_truck", "Box Truck", 2.9f, 8.7f, 6500, 22, 4f, 120, 0.3f, new[] { "truck_box_white", "truck_box_yellow" }, new[] { "White", "Yellow" }, new[] { "Box 16", "Cargo Master" }, braking: 18f), 7.0f, 15f, 3.5f, 0.48f, 1.4f, 0.65f, 0.0f, 2.2f),
 
                 // ---------------- police fleet (level = reputation level needed)
-                Pd("patrol_sedan", "Patrol Sedan", 1, "car_police_cruiser", 2.3f, 4.6f, 1600, 40, 9f, 195, 0.19f, 0.38f, "All-round patrol car."),
-                Pd("patrol_suv", "Patrol SUV", 1, "pd_suv", 2.45f, 4.85f, 2300, 38, 8.5f, 180, 0.67f, 0.39f, "Roomier, tougher, a bit slower."),
-                Pd("patrol_pickup", "Patrol Pickup", 2, "pd_pickup", 2.45f, 5.35f, 2500, 36, 8f, 172, 0.79f, 0.39f, "Heavy-duty truck, good at pushing."),
-                Pd("motorcycle", "Traffic Motorcycle", 2, "pd_motorcycle", 0.9f, 2.2f, 300, 46, 12f, 240, -0.52f, 0.19f, "Nimble, quick, slips through traffic.", motorcycle: true),
-                Pd("unmarked", "Unmarked Sedan", 3, "pd_unmarked", 2.3f, 4.6f, 1600, 42, 9.5f, 195, 0.42f, 0.2f, "Plain car with hidden dash lights."),
-                Pd("transport", "Prisoner Transport", 3, "pd_transport", 2.7f, 6.4f, 3200, 30, 6f, 150, 1.75f, 0.44f, "Van with a caged rear for prisoners."),
-                Pd("interceptor", "Highway Interceptor", 4, "pd_interceptor", 2.3f, 4.3f, 1600, 50, 12f, 205, 0.0f, 0.3f, "Fastest car in the fleet, for pursuits."),
-                Pd("bearcat", "BearCat (armored)", 5, "pd_bearcat", 2.9f, 6.0f, 8000, 28, 5f, 135, 1.16f, 0.33f, "Armored rescue vehicle. Nothing stops it."),
-                Pd("helicopter", "Air Unit Helicopter", 6, "pd_helicopter", 2.6f, 11.6f, 3000, 55, 10f, 110, 1.1f, 0.25f, "Flies over everything. Land on open ground.", heli: true),
+                T(Pd("patrol_sedan", "Patrol Sedan", 1, "car_police_cruiser", 2.3f, 4.6f, 1600, 40, 9f, 195, 0.19f, 0.38f, "All-round patrol car: sharp, predictable."), 10.0f, 30f, 11.0f, 0.72f, 1.2f, 0.25f, 0.15f, 3.5f),
+                T(Pd("patrol_suv", "Patrol SUV", 1, "pd_suv", 2.45f, 4.85f, 2300, 38, 8.5f, 180, 0.67f, 0.39f, "Planted all-wheel drive. Slower to turn in."), 9.5f, 28f, 8.0f, 0.65f, 1.6f, 0.3f, 0.0f, 3.2f),
+                T(Pd("patrol_pickup", "Patrol Pickup", 2, "pd_pickup", 2.45f, 5.35f, 2500, 36, 8f, 172, 0.79f, 0.39f, "Heavy-duty truck; the tail steps out under power."), 8.5f, 26f, 7.0f, 0.62f, 1.0f, 0.3f, 0.3f, 3.0f),
+                T(Pd("motorcycle", "Traffic Motorcycle", 2, "pd_motorcycle", 0.9f, 2.2f, 300, 46, 12f, 240, -0.52f, 0.19f, "Nimble and quick. Slips through traffic.", motorcycle: true), 12.0f, 30f, 16.0f, 0.82f, 2.4f, 0.2f, 0.0f, 4.0f),
+                T(Pd("unmarked", "Unmarked Sedan", 3, "pd_unmarked", 2.3f, 4.6f, 1600, 42, 9.5f, 195, 0.42f, 0.2f, "Rear-drive sleeper: slides if you push it."), 9.5f, 29f, 10.0f, 0.7f, 1.0f, 0.25f, 0.3f, 3.5f),
+                T(Pd("transport", "Prisoner Transport", 3, "pd_transport", 2.7f, 6.4f, 3200, 30, 6f, 150, 1.75f, 0.44f, "Big caged van. Brake early."), 8.0f, 22f, 5.5f, 0.55f, 1.3f, 0.5f, 0.0f, 2.8f),
+                T(Pd("interceptor", "Highway Interceptor", 4, "pd_interceptor", 2.3f, 4.3f, 1600, 50, 12f, 205, 0.0f, 0.3f, "Fastest in the fleet. Huge brakes, lively rear."), 11.0f, 34f, 13.0f, 0.76f, 1.1f, 0.15f, 0.35f, 3.8f),
+                T(Pd("bearcat", "BearCat (armored)", 5, "pd_bearcat", 2.9f, 6.0f, 8000, 28, 5f, 135, 1.16f, 0.33f, "Armored and slow to steer. Nothing stops it."), 8.5f, 17f, 3.0f, 0.48f, 2.0f, 0.7f, 0.0f, 2.4f),
+                T(Pd("helicopter", "Air Unit Helicopter", 6, "pd_helicopter", 2.6f, 11.6f, 3000, 55, 10f, 110, 1.1f, 0.25f, "Flies over everything. Land on open ground.", heli: true), 2.2f, 12f, 4.0f, 1.0f, 2.2f, 0.2f, 0.0f, 1.6f),
             };
 
             AssetDatabase.StartAssetEditing();
@@ -77,6 +77,17 @@ namespace GPA.EditorTools
                 ColourNames = new[] { "Police" },
             };
             Names[s] = new[] { sprite };
+            return s;
+        }
+
+        /// <summary>
+        /// Handling character: grip, brakes, steering response (player), turn left at top speed,
+        /// handbrake grip, engine pull lost near top speed, rear-drive tail slide, coasting drag.
+        /// </summary>
+        private static VehicleSpec T(VehicleSpec s, float grip, float brake, float steer, float highSpeedTurn, float handbrakeGrip, float powerFade, float powerSlide, float coast)
+        {
+            s.Grip = grip; s.Braking = brake; s.SteerResponse = steer; s.HighSpeedTurn = highSpeedTurn;
+            s.HandbrakeGrip = handbrakeGrip; s.PowerFade = powerFade; s.PowerSlide = powerSlide; s.CoastDrag = coast;
             return s;
         }
 

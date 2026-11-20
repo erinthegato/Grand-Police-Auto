@@ -31,7 +31,7 @@ namespace GPA.EditorTools
         public static void Apply()
         {
             PlayerSettings.companyName = "Grand Police Auto";
-            PlayerSettings.productName = "Grand Police Auto";
+            PlayerSettings.productName = "Lights & Sirens: Halden";
             PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, AndroidPackageId);
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, IosBundleId);

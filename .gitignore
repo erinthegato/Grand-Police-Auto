@@ -76,3 +76,11 @@ sysinfo.txt
 /GeneratedAssets/
 /Assets/GPA/Audio/Music/
 /Assets/GPA/Audio/Music.meta
+
+# ---- Songs that were taken out of the game (never upload these) ----
+/Assets/GPA/Audio/FuturecoreAIWav/
+/Assets/GPA/Audio/FuturecoreAIWav.meta
+/Assets/GPA/Audio/OldFuturecoreSynth/
+/Assets/GPA/Audio/OldFuturecoreSynth.meta
+/_to_delete/
+DeleteFuturecoreSongs.bat

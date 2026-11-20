@@ -223,6 +223,23 @@ namespace GPA.EditorTools
         /// <summary>Marks the cells under each curved road so lots, trees and sidewalks work around it.</summary>
         private static void StampCurves()
         {
+            // Beltway ramps: keep lots, estates and trees off them.
+            _ringFine = null;
+            foreach (Ramp r in BeltwayRamps())
+                if (!r.Far)   // the far ramps are stamped after the estates are planned (StampInterchanges)
+                for (int i = 0; i + 1 < r.Points.Count; i++)
+                {
+                    Vector2 a = r.Points[i], b = r.Points[i + 1];
+                    float rr = RampHalf + 3f;
+                    int x0 = Mathf.FloorToInt((Mathf.Min(a.x, b.x) - rr) / T), x1 = Mathf.FloorToInt((Mathf.Max(a.x, b.x) + rr) / T);
+                    int y0 = Mathf.FloorToInt((Mathf.Min(a.y, b.y) - rr) / T), y1 = Mathf.FloorToInt((Mathf.Max(a.y, b.y) + rr) / T);
+                    for (int y = y0; y <= y1; y++)
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        if (!InMap(x, y) || (_grid[x, y] != Cell.Lot && _grid[x, y] != Cell.Forest)) continue;
+                        if (DistToSegment(new Vector2((x + 0.5f) * T, (y + 0.5f) * T), a, b) <= rr) _grid[x, y] = Cell.Highway;
+                    }
+                }
             foreach (var c in AllCurves())
             {
                 c.Line = SampleCurve(c, 2f);
@@ -243,6 +260,81 @@ namespace GPA.EditorTools
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// The four access roads outside town: 1 = one of the three middle tiles that stay road (two lanes
+        /// and the centre line), 2 = an outer tile that becomes grass verge (or water, on a bridge),
+        /// 3 = a tile by the beltway where the road gives way to the overpass. 0 = anything else.
+        /// </summary>
+        private static int ConnectorKind(int x, int y)
+        {
+            int Kind(Road r, int across, int along, bool outside, float inward)
+            {
+                if (!outside || !r.Covers(across) || !r.Spans(along)) return 0;
+                if (inward < StemCut) return 3;
+                return Mathf.Abs(across - (r.Start + r.Width / 2)) <= 1 ? 1 : 2;
+            }
+            int k;
+            if ((k = Kind(RoadNamed("Garnet Street"), y, x, x < WestLand.xMin, (x + 0.5f - RingGarnetX) * T)) != 0) return k;             // west
+            if ((k = Kind(RoadNamed("Lakeview Avenue"), x, y, y < WestLand.yMin, (y + 0.5f - RingLakeviewY) * T)) != 0) return k;         // south
+            if ((k = Kind(RoadNamed("Crosstown Boulevard"), y, x, x >= PortLand.xMax, (RingCrosstownX - x - 0.5f) * T)) != 0) return k;   // east
+            if ((k = Kind(RoadNamed("Grand Boulevard"), x, y, y >= NorthLand.yMax, (RingGrandY - y - 0.5f) * T)) != 0) return k;          // north
+            return 0;
+        }
+
+        private static readonly Dictionary<string, Road> _roadByName = new Dictionary<string, Road>();
+        private static Road RoadNamed(string name)
+        {
+            if (!_roadByName.TryGetValue(name, out Road r)) _roadByName[name] = r = Streets.Concat(Avenues).First(q => q.Name == name);
+            return r;
+        }
+
+        /// <summary>The access roads' bridges over the harbour, narrowed to match the roads.</summary>
+        private static readonly RectInt PortBridgeDeck = new RectInt(196, 95, 12, 3);
+        private static readonly RectInt UplandBridgeDeck = new RectInt(60, 228, 3, 12);
+
+        /// <summary>
+        /// Run after the estates are planned (so they come out the same as before): narrows the access
+        /// roads outside town, ends them short of the beltway (the overpass carries them over it) and
+        /// clears the ground under the far-side ramps. Returns how many estates the new ramps touch.
+        /// </summary>
+        private static int StampInterchanges()
+        {
+            for (int y = MinY; y < MaxY; y++)
+            for (int x = MinX; x < MaxX; x++)
+            {
+                int k = ConnectorKind(x, y);
+                if (k == 2) _grid[x, y] = IsBridge(x, y) ? Cell.Water : Cell.Highway;
+                else if (k == 3) _grid[x, y] = Cell.Highway;
+            }
+            var ramps = BeltwayRamps();
+            void ClearUnder(Vector2 a, Vector2 b, float rr)
+            {
+                int x0 = Mathf.FloorToInt((Mathf.Min(a.x, b.x) - rr) / T), x1 = Mathf.FloorToInt((Mathf.Max(a.x, b.x) + rr) / T);
+                int y0 = Mathf.FloorToInt((Mathf.Min(a.y, b.y) - rr) / T), y1 = Mathf.FloorToInt((Mathf.Max(a.y, b.y) + rr) / T);
+                for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    if (!InMap(x, y) || (_grid[x, y] != Cell.Lot && _grid[x, y] != Cell.Forest)) continue;
+                    if (DistToSegment(new Vector2((x + 0.5f) * T, (y + 0.5f) * T), a, b) <= rr) _grid[x, y] = Cell.Highway;
+                }
+            }
+            foreach (Ramp r in ramps)
+                if (r.Far)
+                    for (int i = 0; i + 1 < r.Points.Count; i++) ClearUnder(r.Points[i], r.Points[i + 1], RampHalf + 3f);
+            foreach (Interchange ic in InterchangesWithRamps(ramps))
+                ClearUnder(ic.P(0f, StemCut + 2f), ic.P(0f, BellY0), StemHalf + 3f);   // the access road, the bridge and the stub beyond it
+            int touched = 0;
+            foreach (Estate e in _estates)
+            {
+                bool hit = false;
+                for (int y = e.Lot.yMin; y < e.Lot.yMax && !hit; y++)
+                for (int x = e.Lot.xMin; x < e.Lot.xMax && !hit; x++)
+                    if (Is(x, y, Cell.Highway)) hit = true;
+                if (hit) { touched++; Debug.LogWarning($"[City] Interchange ramps run through the estate at {e.Number} {e.Street} ({e.Lot})."); }
+            }
+            return touched;
         }
 
         private sealed class DistrictInfo
@@ -341,6 +433,7 @@ namespace GPA.EditorTools
             Classify();
             PlanParkFeatures();
             PlanEstates();
+            StampInterchanges();
             var db = CreateDatabase();
             var grid = new GameObject("City Grid").AddComponent<Grid>();
             grid.cellSize = new Vector3(T, T, 0f);
@@ -519,8 +612,8 @@ namespace GPA.EditorTools
             PaintBridge(ground, horizontal: true,  across: EastBridge.yMin,   from: EastBridge.xMin,   to: EastBridge.xMax);
             PaintBridge(ground, horizontal: false, across: NorthBridge.xMin,  from: NorthBridge.yMin,  to: NorthBridge.yMax, width: 7);
             PaintBridge(ground, horizontal: true,  across: WestBridge.yMin,   from: WestBridge.xMin,   to: WestBridge.xMax);
-            PaintBridge(ground, horizontal: true,  across: PortBridge.yMin,   from: PortBridge.xMin,   to: PortBridge.xMax);
-            PaintBridge(ground, horizontal: false, across: UplandBridge.xMin, from: UplandBridge.yMin, to: UplandBridge.yMax, width: 7);
+            PaintBridge(ground, horizontal: true,  across: PortBridgeDeck.yMin,   from: PortBridgeDeck.xMin,   to: PortBridgeDeck.xMax,   width: 3);
+            PaintBridge(ground, horizontal: false, across: UplandBridgeDeck.xMin, from: UplandBridgeDeck.yMin, to: UplandBridgeDeck.yMax, width: 3);
         }
 
         /// <summary>Grass tinted darker for woodland (lower shade = denser forest).</summary>
@@ -581,6 +674,7 @@ namespace GPA.EditorTools
 
             if (beforeJunction) { Set(ground, x, y, "tile_crosswalk", rot); return; }
             bool twoWay = road.Direction == "two-way";
+            if (ConnectorKind(x, y) == 1 && across != road.Width / 2) { Set(ground, x, y, "tile_asphalt", rot); return; }   // narrowed access road: one lane each way
             if (twoWay && across == road.Width / 2) { Set(ground, x, y, "tile_asphalt_lane_double_yellow", rot); return; }
             // Dashed divider on the low-side edge when the neighbouring tile is a lane going the same way.
             bool sameWayBelow = across > 0 && (!twoWay || (across - 1 != road.Width / 2 && (across < road.Width / 2) == (across - 1 < road.Width / 2)));
@@ -1364,7 +1458,7 @@ namespace GPA.EditorTools
             db.Land.Add(new Rect(Basin.xMax * T, MinY * T, (MaxX - Basin.xMax) * T, MapH * T));
             db.Land.Add(new Rect(Basin.xMin * T, MinY * T, Basin.width * T, (Basin.yMin - MinY) * T));
             db.Land.Add(new Rect(Basin.xMin * T, Basin.yMax * T, Basin.width * T, (MaxY - Basin.yMax) * T));
-            foreach (RectInt b in new[] { WestBridge, PortBridge, UplandBridge })
+            foreach (RectInt b in new[] { WestBridge, PortBridgeDeck, UplandBridgeDeck })
                 db.Land.Add(new Rect(b.xMin * T, b.yMin * T, b.width * T, b.height * T));
             foreach (RectInt l in Lands) db.Land.Add(new Rect(l.xMin * T, l.yMin * T, l.width * T, l.height * T));
             db.Land.Add(new Rect(EastBridge.xMin * T, EastBridge.yMin * T, EastBridge.width * T, EastBridge.height * T));
@@ -1480,6 +1574,17 @@ namespace GPA.EditorTools
 
         private static string BuildRoadGraphAndSignals(Transform props)
         {
+            var (nodes, edges, junctions, junctionOf, fallbacks, deadEnds) = ComputeRoadGraph();
+            var graph = new GameObject("Road Graph").AddComponent<RoadGraph2D>();
+            graph.Nodes = nodes.ToArray();
+            graph.Edges = edges.ToArray();
+            graph.Junctions = junctions.ToArray();
+            return AddSignals(props, nodes, edges, junctions, junctionOf, fallbacks, deadEnds);
+        }
+
+        /// <summary>The whole traffic lane graph: grid lanes, junction turns, connector roads, the beltway and its ramps.</summary>
+        private static (List<RoadGraph2D.Node> nodes, List<RoadGraph2D.Edge> edges, List<RoadGraph2D.Junction> junctions, Dictionary<(Road avenue, Road street), int> junctionOf, int fallbacks, int deadEnds) ComputeRoadGraph()
+        {
             var laneRank = new Dictionary<int, (int rank, int count)>();
             var nodes = new List<RoadGraph2D.Node>();
             var edges = new List<RoadGraph2D.Edge>();
@@ -1566,11 +1671,12 @@ namespace GPA.EditorTools
             int ringNodes = AddRingTraffic(nodes, edges, ringLinks);
             int curveLinks = AddLocalCurveTraffic(nodes, edges);
             Debug.Log($"[City] Curved roads: beltway {ringNodes} lane nodes, local curves joined at {curveLinks} lane splits.");
-            var graph = new GameObject("Road Graph").AddComponent<RoadGraph2D>();
-            graph.Nodes = nodes.ToArray();
-            graph.Edges = edges.ToArray();
-            graph.Junctions = junctions.ToArray();
+            return (nodes, edges, junctions, junctionOf, fallbacks, deadEnds);
+        }
 
+        private static string AddSignals(Transform props, List<RoadGraph2D.Node> nodes, List<RoadGraph2D.Edge> edges, List<RoadGraph2D.Junction> junctions,
+            Dictionary<(Road avenue, Road street), int> junctionOf, int fallbacks, int deadEnds)
+        {
             // Signal heads on two opposite corners per axis.
             var signals = new GameObject("Traffic Signals").AddComponent<TrafficSignals2D>();
             var heads = new List<TrafficSignals2D.Head>();
@@ -1616,8 +1722,11 @@ namespace GPA.EditorTools
                 if (crossing.Count == 0) return;
                 Road j = ringAtHigh ? crossing[crossing.Count - 1] : crossing[0];
                 int jIdx = road.Vertical ? junctionOf[(road, j)] : junctionOf[(j, road)];
-                float ringEdge = (ringAlong + (ringAtHigh ? -RingHalf : RingHalf)) * T + (ringAtHigh ? -3f : 3f);
+                // Connector lanes start where the beltway ramps join the road (the flat crossing for the far side starts there too).
+                float ringEdge = ringAlong * T + (ringAtHigh ? -RampJoin : RampJoin);
                 float jEdge = ringAtHigh ? (j.Start + j.Width + 1) * T + 0.5f : (j.Start - 1) * T - 0.5f;
+                if (ringAtHigh ? ringEdge <= jEdge + 4f : ringEdge >= jEdge - 4f)
+                    Debug.LogError($"[City] {roadName}: too short between its last junction and the beltway for the ramps ({Mathf.Abs(ringEdge - jEdge):0} m).");
                 float centreAcross = (road.Start + road.Width * 0.5f) * T;
                 var link = new RingLink
                 {
@@ -1626,12 +1735,13 @@ namespace GPA.EditorTools
                 };
                 foreach (Lane lane in LanesOf(road))
                 {
+                    if (Mathf.Abs(Mathf.Abs(lane.Across - centreAcross) - StemLane) > 0.1f) continue;   // narrowed: one lane each way
                     bool positive = road.Vertical ? lane.Heading == 0f : lane.Heading == -90f;
                     bool outbound = positive == ringAtHigh;
                     float from = outbound ? jEdge : ringEdge, to = outbound ? ringEdge : jEdge;
                     Vector2 P(float along) => road.Vertical ? new Vector2(lane.Across, along) : new Vector2(along, lane.Across);
                     int a = nodes.Count;
-                    laneRank[a] = laneRank[a + 1] = LaneRank(road, lane);
+                    laneRank[a] = laneRank[a + 1] = (0, 1);
                     nodes.Add(new RoadGraph2D.Node { Position = P(from), Heading = lane.Heading, Vertical = road.Vertical, IsExit = false, Junction = outbound ? jIdx : -1 });
                     nodes.Add(new RoadGraph2D.Node { Position = P(to), Heading = lane.Heading, Vertical = road.Vertical, IsExit = true, Junction = outbound ? -1 : jIdx });
                     edges.Add(new RoadGraph2D.Edge { From = a, To = a + 1, ThroughJunction = false, Control = (P(from) + P(to)) * 0.5f });
@@ -1675,20 +1785,32 @@ namespace GPA.EditorTools
                 chain[(d, o)] = arr;
             }
 
+            var ramps = BeltwayRamps();
+            var ics = InterchangesWithRamps(ramps);
+            int Nearest(IEnumerable<int> ids, Vector2 p) { int bestId = -1; float bd = float.MaxValue; foreach (int id in ids) { float dd = (nodes[id].Position - p).sqrMagnitude; if (dd < bd) { bd = dd; bestId = id; } } return bestId; }
+            int Node(Vector2 p, Vector2 heading) { nodes.Add(new RoadGraph2D.Node { Position = p, Heading = HeadingOf(heading.normalized), Vertical = false, IsExit = false, Junction = -1 }); return nodes.Count - 1; }
+            void Link2(int a, int b, float speed) => edges.Add(new RoadGraph2D.Edge { From = a, To = b, Control = (nodes[a].Position + nodes[b].Position) * 0.5f, SpeedLimit = speed });
             foreach (RingLink link in links)
             {
                 int k = 0; float best = float.MaxValue;
                 for (int i = 0; i < n; i++) { float dd = (line[i] - link.Meet).sqrMagnitude; if (dd < best) { best = dd; k = i; } }
                 int inside = Vector2.Dot(Right(k), link.Inward) > 0f ? 1 : -1;
-                foreach (int d in new[] { 1, -1 })
-                for (int o = 0; o < 2; o++)
+                Interchange ic = ics.First(q => (q.M - link.Meet).sqrMagnitude < 1f);
+                int outExit = Nearest(link.OutExits, ic.P(-StemLane, RampJoin)), inEntry = Nearest(link.InEntries, ic.P(StemLane, RampJoin));
+
+                // The access road over the bridge: out of town on the left lane, into town on the right.
+                Vector2 outward = -ic.N, inwardV = ic.N;
+                int o1 = Node(ic.P(-StemLane, DeckHalf), outward), o2 = Node(ic.P(-StemLane, -DeckHalf), outward), o3 = Node(ic.BellStart, outward);
+                Link2(outExit, o1, StemSpeed); Link2(o1, o2, StemSpeed); Link2(o2, o3, StemSpeed);
+                int i0 = Node(ic.LoopEnd, inwardV), i1 = Node(ic.P(StemLane, -DeckHalf), inwardV), i2 = Node(ic.P(StemLane, DeckHalf), inwardV);
+                Link2(i0, i1, StemSpeed); Link2(i1, i2, StemSpeed); Link2(i2, inEntry, StemSpeed);
+
+                foreach (Ramp r in ramps)
                 {
-                    // Both lanes of each direction can turn off and be joined, so no lane is a closed loop.
-                    int[] arr = chain[(d, o)];
-                    int down = arr[((k + 2 * d) % n + n) % n], up = arr[((k - 2 * d) % n + n) % n];
-                    Vector2 corner = nodes[arr[k]].Position;
-                    foreach (int x in link.OutExits) edges.Add(new RoadGraph2D.Edge { From = x, To = down, ThroughJunction = true, Control = corner });
-                    foreach (int y in link.InEntries) edges.Add(new RoadGraph2D.Edge { From = up, To = y, ThroughJunction = true, Control = corner });
+                    if ((r.Meet - link.Meet).sqrMagnitude >= 1f) continue;
+                    int d = r.Far ? -inside : inside;
+                    int roadNode = r.Far ? (r.On ? o3 : i0) : (r.On ? outExit : inEntry);
+                    AddRampTraffic(nodes, edges, r, chain[(d, 1)], chain[(d, 0)], d, roadNode);
                 }
             }
             return nodes.Count - first;
@@ -1785,6 +1907,488 @@ namespace GPA.EditorTools
             return splits;
         }
 
+        /// <summary>
+        /// Lane nodes along one ramp. Off-ramp: the beltway kerb lane → ramp → the connector's inbound kerb
+        /// lane. On-ramp: the connector's outbound kerb lane → ramp → the beltway kerb lane further on.
+        /// </summary>
+        private static void AddRampTraffic(List<RoadGraph2D.Node> nodes, List<RoadGraph2D.Edge> edges, Ramp r, int[] kerbChain, int[] innerChain, int dir, int roadNode)
+        {
+            int Nearest(IEnumerable<int> ids, Vector2 p) { int bestId = -1; float bd = float.MaxValue; foreach (int id in ids) { float d = (nodes[id].Position - p).sqrMagnitude; if (d < bd) { bd = d; bestId = id; } } return bestId; }
+            int n = kerbChain.Length;
+            int ChainIndex(int node) => System.Array.IndexOf(kerbChain, node);
+            Vector2 travel = (r.Points[1] - r.Points[0]).normalized;
+
+            // Nodes for the ramp's own points (the end that is a connector lane already has a node).
+            int first = r.On ? 1 : 0, last = r.On ? r.Points.Count - 1 : r.Points.Count - 2;
+            var ids = new List<int>();
+            for (int i = first; i <= last; i++)
+            {
+                Vector2 dirv = i + 1 < r.Points.Count ? r.Points[i + 1] - r.Points[i] : r.Points[i] - r.Points[i - 1];
+                ids.Add(nodes.Count);
+                nodes.Add(new RoadGraph2D.Node { Position = r.Points[i], Heading = HeadingOf(dirv.normalized), Vertical = false, IsExit = false, Junction = -1 });
+            }
+            for (int i = 0; i + 1 < ids.Count; i++)
+                edges.Add(new RoadGraph2D.Edge { From = ids[i], To = ids[i + 1], Control = (nodes[ids[i]].Position + nodes[ids[i + 1]].Position) * 0.5f, SpeedLimit = r.Speed[first + i + 1] });
+
+            if (!r.On)
+            {
+                // Leave the beltway from the kerb-lane node just before the taper (about one car in four takes it).
+                int j = ChainIndex(Nearest(kerbChain, r.Points[0]));
+                if (Vector2.Dot(r.Points[0] - nodes[kerbChain[j]].Position, travel) < 0f) j = ((j - dir) % n + n) % n;
+                edges.Add(new RoadGraph2D.Edge { From = kerbChain[j], To = ids[0], Control = (nodes[kerbChain[j]].Position + nodes[ids[0]].Position) * 0.5f, SpeedLimit = RampTaperSpeed, Weight = 1f });
+                // Before it, some inside-lane traffic moves over to the kerb lane (so the inside lane is never a closed loop).
+                int from = ((j - 2 * dir) % n + n) % n;
+                edges.Add(new RoadGraph2D.Edge { From = innerChain[from], To = kerbChain[j], Control = (nodes[innerChain[from]].Position + nodes[kerbChain[j]].Position) * 0.5f, SpeedLimit = HighwaySpeed, Weight = 1f });
+                int entry = roadNode;
+                edges.Add(new RoadGraph2D.Edge { From = ids[ids.Count - 1], To = entry, Control = (nodes[ids[ids.Count - 1]].Position + nodes[entry].Position) * 0.5f, SpeedLimit = r.Far ? LoopSpeed : RampCurveSpeed });
+            }
+            else
+            {
+                int exit = roadNode;
+                edges.Add(new RoadGraph2D.Edge { From = exit, To = ids[0], Control = (nodes[exit].Position + nodes[ids[0]].Position) * 0.5f, SpeedLimit = r.Far ? BellSpeed : RampCurveSpeed });
+                // Merge into the kerb lane at the first beltway node past the end of the taper.
+                Vector2 end = r.Points[r.Points.Count - 1], endDir = (end - r.Points[r.Points.Count - 2]).normalized;
+                int j = ChainIndex(Nearest(kerbChain, end));
+                if (Vector2.Dot(nodes[kerbChain[j]].Position - end, endDir) < 1f) j = ((j + dir) % n + n) % n;
+                edges.Add(new RoadGraph2D.Edge { From = ids[ids.Count - 1], To = kerbChain[j], Control = (end + nodes[kerbChain[j]].Position) * 0.5f, SpeedLimit = RampTaperSpeed });
+                // After the merge, some kerb-lane traffic moves out to the inside lane (which feeds it).
+                int to = ((j + 2 * dir) % n + n) % n;
+                edges.Add(new RoadGraph2D.Edge { From = kerbChain[j], To = innerChain[to], Control = (nodes[kerbChain[j]].Position + nodes[innerChain[to]].Position) * 0.5f, SpeedLimit = HighwaySpeed, Weight = 1f });
+            }
+        }
+
+        // ------------------------------------------------------------------ beltway ramps: geometry
+
+        // Each connector junction gets a right-hand off-ramp and on-ramp for the beltway direction on the
+        // city side: a taper out of (or into) the kerb lane, a parallel slow-down / speed-up lane beside
+        // the beltway, and a curve onto the connector road around a small grass island.
+        private const float RampOffset = 11f;     // ramp lane centre from the beltway centreline (m): just outside the kerb lane
+        private const float RampRadius = 22f;     // curve between the beltway and the connector road (m)
+        private const float RampHalf = 2.25f;     // half the ramp's width (m)
+        private const float RampTaper = 45f;      // lane-change taper between the kerb lane and the ramp lane (m)
+        private const float RampAux = 35f;        // parallel slow-down / speed-up lane (m)
+        private const float KerbLaneOffset = 7f;  // the beltway's kerb lane centre (matches AddRingTraffic)
+        private const float RampTaperSpeed = 20f, RampAuxSpeed = 15f, RampCurveSpeed = 9f;   // m/s
+        private const float RampJoin = RampOffset + RampRadius;   // connector lanes start this far from the beltway centreline (m)
+
+        // ---- Trumpet interchanges. Each access road (the old connector, narrowed to one lane each way
+        // outside town) crosses the beltway on an overpass. City side: the two slip ramps above. Far
+        // side: a 270° loop off the far carriageway onto the bridge, and a sweeping ramp from the bridge
+        // round the outside of the loop onto the far carriageway (the "bell" of the trumpet).
+        // Frame used below: x = along the far carriageway's direction of travel, y = towards town.
+        private const float StemLane = T;           // access-road lane centres either side of its centre line (m)
+        private const float StemHalf = 6f;          // access-road half-width (two 4 m lanes and a centre tile)
+        private const float DeckHalf = 17f;         // overpass deck: this far either side of the beltway centreline (m)
+        private const float LoopR = 15f;            // loop ramp radius (m)
+        private const float BellR = 11f;            // bell ramp corner radius (m)
+        private const float RampGap = 3f;           // grass between neighbouring ramps (m)
+        private const float LoopSpeed = 7.5f, BellSpeed = 7f, StemSpeed = 14f;
+        private const float StemCut = 20f;          // the access road's tiles stop this far from the beltway centreline (m)
+
+        /// <summary>One access road's junction with the beltway, and the frame the interchange is laid out in.</summary>
+        private sealed class Interchange
+        {
+            public string RoadName;
+            public Vector2 M, N, Eu;     // beltway centreline at the road; towards town; city-side direction of travel
+            public int K, Dir;           // nearest RingFine sample; the way the city-side lanes run along the samples
+            public Vector2 P(float x, float y) => M - Eu * x + N * y;
+            public float X(Vector2 p) => Vector2.Dot(p - M, -Eu);
+            public float Y(Vector2 p) => Vector2.Dot(p - M, N);
+            public Vector2 LoopEnd, BellStart;   // where the far ramps meet the access road's lanes
+        }
+
+        private static List<Interchange> Interchanges()
+        {
+            var list = new List<Interchange>();
+            Vector2[] L = RingFine; int count = L.Length;
+            foreach (var (meet, inward, _) in RingMouths())
+            {
+                int k = 0; float best = float.MaxValue;
+                for (int i = 0; i < count; i++) { float d = (L[i] - meet).sqrMagnitude; if (d < best) { best = d; k = i; } }
+                Vector2 t = (L[(k + 1) % count] - L[(k - 1 + count) % count]).normalized;
+                int dir = Vector2.Dot(new Vector2(t.y, -t.x), inward) > 0f ? 1 : -1;
+                Vector2 uhat = t * dir;
+                var ic = new Interchange { M = meet, N = inward, Eu = (uhat - inward * Vector2.Dot(uhat, inward)).normalized, K = k, Dir = dir };
+                ic.LoopEnd = ic.P(StemLane, -(RampOffset + LoopR));
+                ic.BellStart = ic.P(-StemLane, BellY0);
+                list.Add(ic);
+            }
+            string[] names = { "Garnet Street", "Lakeview Avenue", "Crosstown Boulevard", "Grand Boulevard" };
+            for (int i = 0; i < list.Count && i < names.Length; i++) list[i].RoadName = names[i];
+            return list;
+        }
+
+        // Bell layout (frame x/y), derived from the loop so the two ramps keep RampGap of grass between them.
+        private const float LoopBottom = -(RampOffset + 2f * LoopR);                 // lowest point of the loop's centreline
+        private const float BellClear = 2f * RampHalf + RampGap;                     // centre-to-centre spacing of neighbouring ramps
+        private const float BellYEast = LoopBottom - BellClear;                      // the bell's leg along the bottom
+        private const float BellXNorth = StemLane + 2f * LoopR + BellClear;          // the bell's leg back up beside the loop
+        private const float BellY0 = BellYEast + BellR;                              // the access road's out lane turns off here
+
+        private sealed class Ramp
+        {
+            public bool Far;                  // the far carriageway's ramps (loop and bell)
+            public bool On;                   // true = on-ramp (connector → beltway), false = off-ramp
+            public Vector2 Meet, Inward, Side;
+            public float Half;                // the connector road's half-width
+            public Vector2 RoadEnd;           // the connector-lane point the ramp starts or ends at
+            public readonly List<Vector2> Points = new List<Vector2>();   // centreline in driving order
+            public readonly List<float> Speed = new List<float>();        // limit of the segment ending at each point
+            public readonly List<bool> Curve = new List<bool>();          // on the curve (kerbed), not beside the beltway
+            public readonly List<bool> Aux = new List<bool>();            // on the full-width parallel lane
+            public void Add(Vector2 p, float speed, bool curve, bool aux) { Points.Add(p); Speed.Add(speed); Curve.Add(curve); Aux.Add(aux); }
+        }
+
+        private static Vector2[] _ringFine;
+        private static Vector2[] RingFine => _ringFine ??= SampleCurve(Ring, 2f);
+
+        /// <summary>Point and direction of travel on the beltway, <paramref name="s"/> metres from sample <paramref name="k"/> (positive = the way <paramref name="dir"/> runs).</summary>
+        private static void RingWalk(int k, int dir, float s, out Vector2 p, out Vector2 travel)
+        {
+            Vector2[] L = RingFine; int n = L.Length;
+            int step = s >= 0f ? dir : -dir, i = k;
+            float left = Mathf.Abs(s);
+            while (true)
+            {
+                int j = ((i + step) % n + n) % n;
+                float seg = Vector2.Distance(L[i], L[j]);
+                if (left <= seg || seg < 1e-4f)
+                {
+                    p = Vector2.Lerp(L[i], L[j], seg < 1e-4f ? 0f : left / seg);
+                    Vector2 t = (L[j] - L[i]).normalized;
+                    travel = s >= 0f ? t : -t;
+                    return;
+                }
+                left -= seg; i = j;
+            }
+        }
+
+        private static float DistToSegment(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a; float l2 = ab.sqrMagnitude;
+            float u = l2 < 1e-6f ? 0f : Mathf.Clamp01(Vector2.Dot(p - a, ab) / l2);
+            return Vector2.Distance(p, a + ab * u);
+        }
+
+        private static bool NearRamp(List<Ramp> ramps, Vector2 p, float within, bool besideOnly = false)
+        {
+            foreach (Ramp r in ramps)
+                for (int i = 0; i + 1 < r.Points.Count; i++)
+                {
+                    if (besideOnly && (r.Curve[i] || r.Curve[i + 1])) continue;
+                    if (DistToSegment(p, r.Points[i], r.Points[i + 1]) < within) return true;
+                }
+            return false;
+        }
+
+        /// <summary>The polyline cut into pieces no longer than <paramref name="step"/> (so dashed markings dash).</summary>
+        private static Vector2[] Densify(Vector2[] line, float step)
+        {
+            var o = new List<Vector2>();
+            for (int i = 0; i + 1 < line.Length; i++)
+            {
+                int k = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(line[i], line[i + 1]) / step));
+                for (int j = 0; j < k; j++) o.Add(Vector2.Lerp(line[i], line[i + 1], j / (float)k));
+            }
+            if (line.Length > 0) o.Add(line[line.Length - 1]);
+            return o.ToArray();
+        }
+
+        /// <summary>
+        /// Every interchange ramp. City side: an off-ramp and an on-ramp for the city-side carriageway.
+        /// Far side: the loop (off the far carriageway, onto the bridge) and the bell (off the bridge,
+        /// round the loop, onto the far carriageway). Deterministic: drawing, traffic and tree clearing all use it.
+        /// </summary>
+        private static List<Ramp> BeltwayRamps()
+        {
+            var ramps = new List<Ramp>();
+            foreach (Interchange ic in Interchanges())
+            {
+                Vector2 meet = ic.M, inward = ic.N, eu = ic.Eu;
+                int k = ic.K, dir = ic.Dir;
+                Vector2 side = new Vector2(inward.y, -inward.x);                         // right-hand side driving in along the road
+                float half = StemHalf;
+                float R = RampRadius;
+                Vector2 Beside(float s, float offset) { RingWalk(k, dir, s, out Vector2 p, out Vector2 tr); return p + new Vector2(tr.y, -tr.x) * offset; }
+                Vector2 BesideFar(float s, float offset) { RingWalk(k, -dir, s, out Vector2 p, out Vector2 tr); return p + new Vector2(tr.y, -tr.x) * offset; }
+                float TaperOffset(float x) => Mathf.Lerp(KerbLaneOffset, RampOffset, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(x)));
+                Vector2 uhat = eu;    // city-side direction of travel
+
+                // Off-ramp: taper out of the kerb lane, run alongside, then curve right into the inbound lane.
+                var off = new Ramp { On = false, Meet = meet, Inward = inward, Side = side, Half = half };
+                off.RoadEnd = meet + side * StemLane + inward * RampJoin;
+                Vector2 offCentre = off.RoadEnd - eu * R, offStart = offCentre - inward * R;
+                float s0 = Vector2.Dot(offStart - meet, uhat), sStart = s0 - RampAux - RampTaper;
+                for (float s = sStart; s < s0 - 2.5f; s += 5f)
+                {
+                    float x = (s - sStart) / RampTaper;
+                    off.Add(Beside(s, TaperOffset(x)), x < 1f ? RampTaperSpeed : RampAuxSpeed, false, x >= 1f);
+                }
+                for (int a = 0; a <= 8; a++)
+                {
+                    float th = Mathf.PI * 0.5f * a / 8f;
+                    off.Add(offCentre + eu * (R * Mathf.Sin(th)) - inward * (R * Mathf.Cos(th)), RampCurveSpeed, a > 0, a == 0);
+                }
+                ramps.Add(off);
+
+                // On-ramp: curve right out of the outbound lane, speed up alongside, then taper into the kerb lane.
+                var on = new Ramp { On = true, Meet = meet, Inward = inward, Side = side, Half = half };
+                on.RoadEnd = meet - side * StemLane + inward * RampJoin;
+                Vector2 onCentre = on.RoadEnd + eu * R;
+                for (int a = 0; a <= 8; a++)
+                {
+                    float ph = Mathf.PI * 0.5f * a / 8f;
+                    on.Add(onCentre - eu * (R * Mathf.Cos(ph)) - inward * (R * Mathf.Sin(ph)), RampCurveSpeed, a < 8, a == 8);
+                }
+                float s1 = Vector2.Dot(on.Points[on.Points.Count - 1] - meet, uhat);
+                for (float s = s1 + 5f; s <= s1 + RampAux + RampTaper + 0.01f; s += 5f)
+                {
+                    float x = (s - s1 - RampAux) / RampTaper;
+                    on.Add(Beside(s, TaperOffset(1f - x)), x > 0f ? RampTaperSpeed : RampAuxSpeed, false, x <= 0f);
+                }
+                ramps.Add(on);
+
+                // Loop: taper out of the far kerb lane, run alongside (under the bridge), then turn right
+                // through 270° to come up beside the bridge and onto it, heading into town.
+                var loop = new Ramp { Far = true, On = false, Meet = meet, Inward = inward, Side = side, Half = half };
+                float x0 = StemLane + LoopR;   // the loop leaves the beltway here (far-travel distance past the road)
+                float lStart = x0 - RampAux - RampTaper;
+                for (float s = lStart; s < x0 - 2.5f; s += 5f)
+                {
+                    float x = (s - lStart) / RampTaper;
+                    loop.Add(BesideFar(s, TaperOffset(x)), x < 1f ? RampTaperSpeed : RampAuxSpeed, false, x >= 1f);
+                }
+                {
+                    RingWalk(k, -dir, x0, out Vector2 pc, out Vector2 f);
+                    Vector2 rr = new Vector2(f.y, -f.x);                    // outward, away from the beltway
+                    Vector2 top = pc + rr * RampOffset, centre = top + rr * LoopR;
+                    const int segs = 24;
+                    for (int a = 0; a <= segs; a++)
+                    {
+                        float th = 1.5f * Mathf.PI * a / segs;
+                        loop.Add(centre - rr * (LoopR * Mathf.Cos(th)) + f * (LoopR * Mathf.Sin(th)), a == 0 ? RampAuxSpeed : LoopSpeed, a > 0, a == 0);
+                    }
+                    ic.LoopEnd = loop.Points[loop.Points.Count - 1];
+                }
+                loop.RoadEnd = ic.LoopEnd;
+                ramps.Add(loop);
+
+                // Bell: off the bridge's out lane, down past the loop, along the bottom, back up beside it and
+                // round to the right onto the far carriageway, then speed up alongside and taper in.
+                var bell = new Ramp { Far = true, On = true, Meet = meet, Inward = inward, Side = side, Half = half };
+                bell.RoadEnd = ic.BellStart;
+                void Arc(Vector2 c, float r, float fromDeg, float toDeg, int segs, bool skipFirst)
+                {
+                    for (int a = skipFirst ? 1 : 0; a <= segs; a++)
+                    {
+                        float th = Mathf.Lerp(fromDeg, toDeg, a / (float)segs) * Mathf.Deg2Rad;
+                        bell.Add(ic.P(c.x + r * Mathf.Cos(th), c.y + r * Mathf.Sin(th)), BellSpeed, true, false);
+                    }
+                }
+                // Corner 1: heading away from town, turn left onto the bottom leg.
+                Arc(new Vector2(-StemLane + BellR, BellY0), BellR, 180f, 270f, 6, false);
+                // Corner 2: along the bottom, turn left to head back towards the beltway beside the loop.
+                Arc(new Vector2(BellXNorth - BellR, BellY0), BellR, 270f, 360f, 6, false);
+                // Corner 3: turn right to run alongside the far carriageway.
+                float yTurn = -RampOffset - BellR;
+                Arc(new Vector2(BellXNorth + BellR, yTurn), BellR, 180f, 90f, 6, false);
+                float s3 = BellXNorth + BellR;
+                bell.Aux[bell.Aux.Count - 1] = true;
+                for (float s = s3 + 5f; s <= s3 + RampAux + RampTaper + 0.01f; s += 5f)
+                {
+                    float x = (s - s3 - RampAux) / RampTaper;
+                    bell.Add(BesideFar(s, TaperOffset(1f - x)), x > 0f ? RampTaperSpeed : RampAuxSpeed, false, x <= 0f);
+                }
+                ramps.Add(bell);
+            }
+            return ramps;
+        }
+
+        /// <summary>The far ramps' meeting points with the access road, after BeltwayRamps has worked them out.</summary>
+        private static List<Interchange> InterchangesWithRamps(List<Ramp> ramps)
+        {
+            var ics = Interchanges();
+            foreach (Interchange ic in ics)
+                foreach (Ramp r in ramps)
+                    if (r.Far && !r.On && (r.Meet - ic.M).sqrMagnitude < 1f) ic.LoopEnd = r.RoadEnd;
+            return ics;
+        }
+
+        /// <summary>
+        /// Rebuilds only the beltway and its interchanges in the open city scene: the access roads'
+        /// tiles (narrowed outside town, ended short of the beltway), the curved-road drawing with the
+        /// overpasses, the traffic graph's lanes (junctions and signals are unchanged) and any trees or
+        /// props standing on the new ramps. Everything else in the scene, including hand edits, is left alone.
+        /// </summary>
+        [MenuItem("GPA/City/Rebuild Interchanges (open scene)")]
+        private static void RebuildRampsMenu()
+        {
+            string report = RebuildRampsInOpenScene();
+            Debug.Log("[City] " + report);
+            EditorUtility.DisplayDialog("Interchanges", report, "OK");
+        }
+
+        public static string RebuildRampsInOpenScene()
+        {
+            if (Application.isPlaying) return "Stop play mode first.";
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene.path != ScenePath) return $"Open {ScenePath} first.";
+            var graph = Object.FindAnyObjectByType<RoadGraph2D>();
+            if (graph == null) return "No Road Graph in the open scene.";
+            Tilemap water = null, ground = null, edge = null;
+            foreach (var tm in Object.FindObjectsByType<Tilemap>(FindObjectsInactive.Include))
+            {
+                if (tm.name == "Water") water = tm; else if (tm.name == "Ground") ground = tm; else if (tm.name == "Water Edge") edge = tm;
+            }
+            if (water == null || ground == null || edge == null) return "City tilemaps (Water, Ground, Water Edge) not found.";
+            string layers = EnsureOverpassLayers();
+
+            // 0. The deterministic layout, as a full build would make it.
+            Tiles.Clear();
+            _ringFine = null;
+            Classify();
+            PlanEstates();
+            int estatesHit = StampInterchanges();
+            Ring.Line = SampleCurve(Ring, 2f);
+            var ramps = BeltwayRamps();
+            var ics = InterchangesWithRamps(ramps);
+
+            // 1. Ground tiles: the access roads and the ground round each interchange.
+            int painted = 0;
+            var block = BlockTile();
+            void Repaint(int x, int y)
+            {
+                if (!InMap(x, y)) return;
+                var cell = new Vector3Int(x, y, 0);
+                ground.SetTransformMatrix(cell, Matrix4x4.identity);
+                ground.SetColor(cell, Color.white);
+                if (_grid[x, y] == Cell.Water)
+                {
+                    ground.SetTile(cell, null);
+                    water.SetTile(cell, GetTile("tile_water"));
+                    bool touches = false;
+                    for (int dy = -1; dy <= 1 && !touches; dy++)
+                    for (int dx = -1; dx <= 1 && !touches; dx++)
+                        if (InMap(x + dx, y + dy) && _grid[x + dx, y + dy] != Cell.Water) touches = true;
+                    if (touches) edge.SetTile(cell, block);
+                }
+                else
+                {
+                    water.SetTile(cell, null);
+                    PaintCell(ground, x, y);
+                }
+                painted++;
+            }
+            for (int y = MinY; y < MaxY; y++)
+            for (int x = MinX; x < MaxX; x++)
+                if (ConnectorKind(x, y) != 0) Repaint(x, y);
+            foreach (Interchange ic in ics)
+            {
+                int cx = Mathf.FloorToInt(ic.M.x / T), cy = Mathf.FloorToInt(ic.M.y / T);
+                for (int y = cy - 45; y <= cy + 45; y++)
+                for (int x = cx - 45; x <= cx + 45; x++)
+                    if (InMap(x, y) && _grid[x, y] == Cell.Highway && ConnectorKind(x, y) == 0) Repaint(x, y);
+            }
+            PaintBridge(ground, horizontal: true,  across: PortBridgeDeck.yMin,   from: PortBridgeDeck.xMin,   to: PortBridgeDeck.xMax,   width: 3);
+            PaintBridge(ground, horizontal: false, across: UplandBridgeDeck.xMin, from: UplandBridgeDeck.yMin, to: UplandBridgeDeck.yMax, width: 3);
+            EditorUtility.SetDirty(water); EditorUtility.SetDirty(ground); EditorUtility.SetDirty(edge);
+
+            // 2. Road drawing and the overpasses.
+            foreach (GameObject go in scene.GetRootGameObjects()) if (go.name == "Curved Roads") Object.DestroyImmediate(go);
+            BuildCurvedRoadMeshes(new GameObject("Curved Roads").transform);
+
+            // 3. Traffic lanes. Junctions (and the signals that point at them) must come out identical.
+            var g = ComputeRoadGraph();
+            if (g.junctions.Count != graph.Junctions.Length) return $"Junction count changed ({graph.Junctions.Length} → {g.junctions.Count}); run a full rebuild instead.";
+            graph.Nodes = g.nodes.ToArray();
+            graph.Edges = g.edges.ToArray();
+            EditorUtility.SetDirty(graph);
+
+            // 4. Trees on ground that is now road or verge, and street props on the new ramps.
+            int trees = 0, props = 0, buildings = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                bool forest = root.name == "Forest", isProps = root.name == "Props", isBuildings = root.name == "Buildings";
+                if (!forest && !isProps && !isBuildings) continue;
+                for (int i = root.transform.childCount - 1; i >= 0; i--)
+                {
+                    Transform c = root.transform.GetChild(i);
+                    Vector2 pos = c.position;
+                    int tx = Mathf.FloorToInt(pos.x / T), ty = Mathf.FloorToInt(pos.y / T);
+                    bool onNewGround = InMap(tx, ty) && (_grid[tx, ty] == Cell.Highway || _grid[tx, ty] == Cell.Water) && ics.Any(ic => (ic.M - pos).magnitude < 190f);
+                    if (!onNewGround && !NearRamp(ramps, pos, RampHalf + (forest ? 2f : 1f))) continue;
+                    if (isBuildings) { if (NearRamp(ramps, pos, RampHalf + 1f)) buildings++; continue; }   // never delete a building: just report it
+                    Object.DestroyImmediate(c.gameObject);
+                    if (forest) trees++; else props++;
+                }
+            }
+
+            // 5. The location database's land: the access roads' bridges are narrower now.
+            var locations = Object.FindAnyObjectByType<CityLocations>();
+            if (locations != null && locations.Database != null)
+            {
+                var land = locations.Database.Land;
+                Rect R(RectInt b) => new Rect(b.xMin * T, b.yMin * T, b.width * T, b.height * T);
+                for (int i = 0; i < land.Count; i++)
+                {
+                    if (land[i] == R(PortBridge)) land[i] = R(PortBridgeDeck);
+                    else if (land[i] == R(UplandBridge)) land[i] = R(UplandBridgeDeck);
+                }
+                EditorUtility.SetDirty(locations.Database);
+                AssetDatabase.SaveAssets();
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return $"Interchanges rebuilt: {ics.Count} overpasses, {ramps.Count} ramps; repainted {painted} tiles; road graph {g.nodes.Count} nodes, {g.edges.Count} edges; " +
+                   $"removed {trees} trees and {props} props" + (buildings > 0 ? $"; WARNING {buildings} buildings sit on a ramp" : "") +
+                   (estatesHit > 0 ? $"; WARNING the ramps cross {estatesHit} estate lots" : "") + (layers != null ? "; " + layers : "") + ".";
+        }
+
+        /// <summary>Adds the two physics layers the overpasses use, if the project doesn't have them yet.</summary>
+        private static string EnsureOverpassLayers()
+        {
+            var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            var layers = tagManager.FindProperty("layers");
+            var added = new List<string>();
+            foreach (string name in new[] { Overpass2D.RailLayerName, Overpass2D.UpperLayerName })
+            {
+                bool exists = false;
+                for (int i = 8; i < 32; i++) if (layers.GetArrayElementAtIndex(i).stringValue == name) exists = true;
+                if (exists) continue;
+                for (int i = 16; i < 32; i++)
+                {
+                    var el = layers.GetArrayElementAtIndex(i);
+                    if (!string.IsNullOrEmpty(el.stringValue)) continue;
+                    el.stringValue = name; added.Add($"{name} = layer {i}");
+                    break;
+                }
+            }
+            if (added.Count == 0) return null;
+            tagManager.ApplyModifiedPropertiesWithoutUndo();
+            return "added physics layers " + string.Join(", ", added);
+        }
+
+        /// <summary>One ground cell, painted the way <see cref="PaintGround"/> paints it (not water).</summary>
+        private static void PaintCell(Tilemap ground, int x, int y)
+        {
+            var cell = new Vector3Int(x, y, 0);
+            switch (_grid[x, y])
+            {
+                case Cell.Park: ground.SetTile(cell, GetTile("tile_grass")); break;
+                case Cell.Forest when _tracks.Contains(new Vector2Int(x, y)): PaintDirt(ground, x, y); break;
+                case Cell.Forest when _cleared.Contains(new Vector2Int(x, y)): PaintGrass(ground, x, y, 0.9f); break;
+                case Cell.Forest: PaintGrass(ground, x, y, OutsideHighway(x, y) ? 0.62f : 0.78f); break;
+                case Cell.Highway: PaintGrass(ground, x, y, 0.7f); break;
+                case Cell.Curve: ground.SetTile(cell, GetTile("tile_sidewalk")); break;
+                case Cell.Lot when DistrictAt(x, y).Suburban: PaintGrass(ground, x, y, 0.92f); break;
+                case Cell.Lot:
+                case Cell.Plaza: ground.SetTile(cell, GetTile("tile_sidewalk")); break;
+                case Cell.Sidewalk: PaintSidewalk(ground, x, y); break;
+                case Cell.Road: PaintRoad(ground, x, y); break;
+            }
+        }
+
         // ------------------------------------------------------------------ curved roads: drawing
 
         private const string CurveMeshPath = "Assets/GPA/Data/City/Halden_CurvedRoads.asset";
@@ -1844,73 +2448,81 @@ namespace GPA.EditorTools
             }
 
             // Beltway: gravel shoulders, asphalt, edge lines, dashed lane lines, double yellow median.
-            // Where a connector road joins, the shoulder and edge line on that side stop, and a flared
-            // asphalt apron with kerbed corners joins the road to the beltway.
+            // The access roads cross over it on bridges, so it runs unbroken past every interchange.
             Vector2[] ring = Ring.Line;
             float hw = Ring.HalfWidth;
-            var mouths = RingMouths();
-            bool InMouth(Vector2 p)
-            {
-                foreach (var (meet, inward, half) in mouths)
-                {
-                    Vector2 d = p - meet;
-                    float along = Vector2.Dot(d, inward);
-                    if (along > 0f && (d - inward * along).magnitude < half + MouthFillet) return true;
-                }
-                return false;
-            }
-            Strip("Shoulder", ring, true, hw + 1.25f, 1.25f, skip: InMouth); Strip("Shoulder", ring, true, -(hw + 1.25f), 1.25f, skip: InMouth);
+            // The ramps run alongside the beltway: no shoulder or solid edge line where they join it.
+            var ramps = BeltwayRamps();
+            var ics = InterchangesWithRamps(ramps);
+            bool Skip(Vector2 p) => NearRamp(ramps, p, RampHalf + 2.6f, besideOnly: true);   // by the curve the edge line stays: it is the gore line
+            Strip("Shoulder", ring, true, hw + 1.25f, 1.25f, skip: Skip); Strip("Shoulder", ring, true, -(hw + 1.25f), 1.25f, skip: Skip);
             Strip("Asphalt", ring, true, 0f, hw);
-            Strip("White", ring, true, hw - 0.6f, 0.15f, skip: InMouth); Strip("White", ring, true, -(hw - 0.6f), 0.15f, skip: InMouth);
+            Strip("White", ring, true, hw - 0.6f, 0.15f, skip: Skip); Strip("White", ring, true, -(hw - 0.6f), 0.15f, skip: Skip);
             Strip("White", ring, true, 5f, 0.12f, 3f, 6f); Strip("White", ring, true, -5f, 0.12f, 3f, 6f);
             Strip("Yellow", ring, true, 0.35f, 0.1f); Strip("Yellow", ring, true, -0.35f, 0.1f);
 
-            foreach (var (meet, inward, half) in mouths)
+            foreach (Interchange ic in ics)
             {
-                if (!parts.TryGetValue("Asphalt", out var asphalt)) parts["Asphalt"] = asphalt = (new List<Vector3>(), new List<int>());
-                if (!parts.TryGetValue("Kerb", out var kerb)) parts["Kerb"] = kerb = (new List<Vector3>(), new List<int>());
-                Vector2 side = new Vector2(inward.y, -inward.x);
-                float reach = hw + MouthFillet + 3f;   // from the beltway centreline out along the road
-                void Quad4(List<Vector3> v, List<int> t, Vector2 a, Vector2 b, Vector2 c, Vector2 d)
+                // Town side: from under the bridge out past where the slip ramps join, over the end of the road's tiles.
+                Vector2[] near = Densify(new[] { ic.P(0f, DeckHalf - 1f), ic.P(0f, RampJoin + 10f) }, 2f);
+                bool AtRampJoin(Vector2 p) => NearRamp(ramps, p, RampHalf + 0.6f);
+                Strip("Asphalt", near, false, 0f, StemHalf);
+                Strip("White", near, false, StemHalf - 0.45f, 0.12f, skip: AtRampJoin); Strip("White", near, false, -(StemHalf - 0.45f), 0.12f, skip: AtRampJoin);
+                Strip("Yellow", near, false, 0.3f, 0.1f); Strip("Yellow", near, false, -0.3f, 0.1f);
+                // Far side: a short two-way stub off the bridge to where the loop comes up, then the bell's lane alone.
+                float yLoop = ic.Y(ic.LoopEnd);
+                Vector2[] stub = Densify(new[] { ic.P(0f, -DeckHalf + 1f), ic.P(0f, yLoop) }, 2f);
+                Strip("Asphalt", stub, false, 0f, StemHalf);
+                Strip("White", stub, false, StemHalf - 0.45f, 0.12f); Strip("White", stub, false, -(StemHalf - 0.45f), 0.12f);
+                Strip("Yellow", stub, false, 0.3f, 0.1f); Strip("Yellow", stub, false, -0.3f, 0.1f);
+                Vector2[] lane = { ic.P(-StemLane, yLoop + 0.5f), ic.BellStart };
+                Strip("Asphalt", lane, false, 0f, RampHalf);
+                Strip("Kerb", lane, false, RampHalf + 0.15f, 0.2f); Strip("Kerb", lane, false, -(RampHalf + 0.15f), 0.2f);
+                // Grass nose between the bell's lane and the loop coming up, where the stub ends.
+                Strip("Kerb", new[] { ic.P(-StemLane + RampHalf + 0.2f, yLoop), ic.P(StemLane - RampHalf - 0.2f, yLoop) }, false, 0f, 0.2f);
+
+                // The overpass deck, drawn above the beltway's traffic: shadow, deck, parapets, markings.
+                Vector2 sun = new Vector2(1.4f, -1.4f);
+                Vector2[] deck = Densify(new[] { ic.P(0f, -DeckHalf), ic.P(0f, DeckHalf) }, 2f);
+                Strip("DeckShadow", deck.Select(q => q + sun).ToArray(), false, 0f, StemHalf + 0.6f);
+                Strip("Deck", deck, false, 0f, StemHalf + 0.6f);
+                Strip("Parapet", deck, false, StemHalf + 0.35f, 0.25f); Strip("Parapet", deck, false, -(StemHalf + 0.35f), 0.25f);
+                Strip("DeckWhite", deck, false, StemHalf - 0.45f, 0.12f); Strip("DeckWhite", deck, false, -(StemHalf - 0.45f), 0.12f);
+                Strip("DeckYellow", deck, false, 0.3f, 0.1f); Strip("DeckYellow", deck, false, -0.3f, 0.1f);
+                foreach (float y in new[] { -DeckHalf + 0.2f, DeckHalf - 0.2f })   // expansion joints at the ends
+                    Strip("Parapet", new[] { ic.P(-StemHalf, y), ic.P(StemHalf, y) }, false, 0f, 0.12f);
+                BuildOverpass(root, ic);
+            }
+
+            // Ramps: asphalt; alongside the beltway a solid outer edge line, gravel shoulder and a dashed
+            // line against the kerb lane; on the curves, kerbs (which stop where the ramp meets a road).
+            foreach (Ramp r in ramps)
+            {
+                Vector2[] all = r.Points.ToArray();
+                Strip("Asphalt", all, false, 0f, RampHalf);
+                Vector2[] beside = Enumerable.Range(0, all.Length).Where(i => !r.Curve[i]).Select(i => all[i]).ToArray();
+                Vector2[] aux = Enumerable.Range(0, all.Length).Where(i => r.Aux[i]).Select(i => all[i]).ToArray();
+                Vector2[] curve = Enumerable.Range(0, all.Length).Where(i => r.Curve[i] || (i > 0 && r.Curve[i - 1]) || (i + 1 < all.Length && r.Curve[i + 1])).Select(i => all[i]).ToArray();
+                if (beside.Length > 1)
                 {
-                    int k = v.Count; v.Add(a); v.Add(b); v.Add(c); v.Add(d);
-                    t.Add(k); t.Add(k + 1); t.Add(k + 2); t.Add(k); t.Add(k + 2); t.Add(k + 3);
+                    Strip("Shoulder", beside, false, RampHalf + 1.25f, 1.25f);
+                    Strip("White", beside, false, RampHalf - 0.45f, 0.12f);
                 }
-                // The road itself, from the middle of the beltway out past the flare.
-                Quad4(asphalt.v, asphalt.t, meet - side * half, meet + side * half, meet + side * half + inward * reach, meet - side * half + inward * reach);
-                // Curved corners: fill between the road edge and the beltway edge, kerbed along the arc.
-                foreach (float sgn in new[] { -1f, 1f })
+                if (aux.Length > 1) Strip("White", Densify(aux, 0.5f), false, -RampHalf, 0.12f, 2f, 3f);
+                if (curve.Length > 1)
                 {
-                    Vector2 corner = meet + inward * hw + side * (sgn * half);              // where road edge meets beltway edge
-                    Vector2 centre = corner + side * (sgn * MouthFillet) + inward * MouthFillet;
-                    const int steps = 10;
-                    var arc = new List<Vector2>();
-                    for (int i = 0; i <= steps; i++)
+                    Interchange ic = ics.First(q => (q.M - r.Meet).sqrMagnitude < 1f);
+                    float yLoop = ic.Y(ic.LoopEnd);
+                    bool OnRoadOrBeltway(Vector2 p)
                     {
-                        float ang = Mathf.PI * 0.5f * i / steps;                           // from the beltway edge round to the road edge
-                        arc.Add(centre - inward * (MouthFillet * Mathf.Cos(ang)) - side * (sgn * MouthFillet * Mathf.Sin(ang)));
+                        float y = ic.Y(p), x = ic.X(p);
+                        if (Mathf.Abs(y) < hw + 0.5f) return true;                                         // the beltway
+                        return Mathf.Abs(x) < StemHalf - 0.1f && y > yLoop - 0.5f && y < RampJoin + 10f;    // the access road
                     }
-                    for (int i = 0; i < steps; i++)
-                    {
-                        int k = asphalt.v.Count;
-                        asphalt.v.Add(corner); asphalt.v.Add(arc[i]); asphalt.v.Add(arc[i + 1]);
-                        asphalt.t.Add(k); asphalt.t.Add(k + 1); asphalt.t.Add(k + 2);
-                        asphalt.t.Add(k); asphalt.t.Add(k + 2); asphalt.t.Add(k + 1);       // both windings
-                        Vector2 o0 = (centre - arc[i]).normalized * 0.35f, o1 = (centre - arc[i + 1]).normalized * 0.35f;   // kerb on the verge side
-                        Quad4(kerb.v, kerb.t, arc[i], arc[i] + o0, arc[i + 1] + o1, arc[i + 1]);
-                        Quad4(kerb.v, kerb.t, arc[i + 1], arc[i + 1] + o1, arc[i] + o0, arc[i]);
-                    }
-                    // Kerb continues straight along the road edge beyond the flare.
-                    Vector2 e0 = meet + side * (sgn * half) + inward * (hw + MouthFillet), e1 = meet + side * (sgn * half) + inward * reach;
-                    Vector2 o = side * (sgn * 0.35f);
-                    Quad4(kerb.v, kerb.t, e0, e0 + o, e1 + o, e1); Quad4(kerb.v, kerb.t, e1, e1 + o, e0 + o, e0);
+                    Vector2[] dense = Densify(curve, 1f);
+                    Strip("Kerb", dense, false, RampHalf + 0.15f, 0.2f, skip: OnRoadOrBeltway);    // outer side
+                    Strip("Kerb", dense, false, -(RampHalf + 0.15f), 0.2f, skip: OnRoadOrBeltway); // inner side
                 }
-                // Centre line carried across the apron to the beltway.
-                Strip("Yellow", new[] { meet + inward * (hw - 0.6f), meet + inward * reach }, false, 0.3f, 0.1f);
-                Strip("Yellow", new[] { meet + inward * (hw - 0.6f), meet + inward * reach }, false, -0.3f, 0.1f);
-                // Give-way line across the lanes heading onto the beltway.
-                Strip("White", new[] { meet + inward * (hw + 0.6f), meet + inward * (hw + 0.6f) + side * half }, false, 0f, 0.25f, 0.9f, 0.6f);
-                Strip("White", new[] { meet + inward * (hw + 0.6f) - side * half, meet + inward * (hw + 0.6f) }, false, 0f, 0.25f, 0.9f, 0.6f);
             }
 
             // Local curves: kerbs, asphalt, dashed centre line. Ends run a little into the grid road.
@@ -1931,6 +2543,10 @@ namespace GPA.EditorTools
                 { "Shoulder", (new Color(0.47f, 0.44f, 0.38f), 300) }, { "Kerb", (new Color(0.74f, 0.74f, 0.72f), 305) },
                 { "Asphalt", (new Color(0.25f, 0.25f, 0.27f), 310) }, { "White", (new Color(0.93f, 0.93f, 0.9f), 320) },
                 { "Yellow", (new Color(0.95f, 0.76f, 0.16f), 320) },
+                // The overpass decks sit above the beltway's cars (Roofs layer, below anything on the bridge).
+                { "DeckShadow", (new Color(0f, 0f, 0f, 0.38f), -480) }, { "Deck", (new Color(0.29f, 0.29f, 0.31f), -470) },
+                { "Parapet", (new Color(0.68f, 0.68f, 0.66f), -460) }, { "DeckWhite", (new Color(0.93f, 0.93f, 0.9f), -465) },
+                { "DeckYellow", (new Color(0.95f, 0.76f, 0.16f), -465) },
             };
             if (AssetDatabase.LoadAssetAtPath<Mesh>(CurveMeshPath) != null) AssetDatabase.DeleteAsset(CurveMeshPath);
             bool firstMesh = true;
@@ -1949,7 +2565,32 @@ namespace GPA.EditorTools
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var mr = go.AddComponent<MeshRenderer>();
                 mr.sharedMaterial = SolidMaterial("Road" + kv.Key, colours[kv.Key].c);
-                Sorting2D.Apply(mr, Sorting2D.Ground, colours[kv.Key].order);
+                Sorting2D.Apply(mr, colours[kv.Key].order < 0 ? Sorting2D.Roofs : Sorting2D.Ground, colours[kv.Key].order);
+            }
+        }
+
+        /// <summary>
+        /// The overpass's two-level physics: an <see cref="Overpass2D"/> that lifts cars and people onto the
+        /// deck when they drive or walk onto it from either end, and parapet colliders that only the deck level hits.
+        /// </summary>
+        private static void BuildOverpass(Transform root, Interchange ic)
+        {
+            var go = new GameObject("Overpass " + ic.RoadName);
+            go.transform.SetParent(root);
+            go.transform.SetPositionAndRotation(ic.M, Quaternion.Euler(0f, 0f, Vector2.SignedAngle(Vector2.up, ic.N)));
+            var ov = go.AddComponent<Overpass2D>();
+            ov.HalfLength = DeckHalf;
+            ov.HalfWidth = StemHalf + 0.6f;
+            int railLayer = LayerMask.NameToLayer(Overpass2D.RailLayerName);
+            foreach (float sgn in new[] { -1f, 1f })
+            {
+                var rail = new GameObject(sgn < 0 ? "Parapet L" : "Parapet R");
+                rail.transform.SetParent(go.transform, false);
+                rail.transform.localPosition = new Vector3(sgn * (StemHalf + 0.35f), 0f, 0f);
+                if (railLayer >= 0) rail.layer = railLayer;
+                var box = rail.AddComponent<BoxCollider2D>();
+                box.size = new Vector2(0.5f, DeckHalf * 2f + 2f);
+                rail.isStatic = true;
             }
         }
 

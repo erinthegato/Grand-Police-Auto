@@ -25,6 +25,7 @@ namespace GPA.Game
             public bool hasCar;
             public float carX, carY, carHeading;
             public float hour = 8f;
+            public int day;                  // in-game day, so record dates keep moving forward between sessions
             public bool onDuty = true;
             public int completed, failed, arrests;
             public string place;
@@ -75,7 +76,7 @@ namespace GPA.Game
                 d.hasCar = true;
                 d.carX = car.transform.position.x; d.carY = car.transform.position.y; d.carHeading = car.transform.eulerAngles.z;
             }
-            if (Services.TryGet(out ITimeOfDay clock)) d.hour = clock.Hour;
+            if (Services.TryGet(out ITimeOfDay clock)) { d.hour = clock.Hour; d.day = clock.Day; }
             var calls = UnityEngine.Object.FindAnyObjectByType<CalloutManager>();
             if (calls != null) { d.onDuty = calls.OnDuty; d.completed = calls.Completed; d.failed = calls.Failed; d.arrests = calls.Arrests; }
             if (Services.TryGet(out ILocationService loc)) d.place = loc.Describe(pos);
@@ -107,7 +108,7 @@ namespace GPA.Game
             if (Services.TryGet(out ICustodySave custody))
                 custody.Restore(d.prisoners, car != null ? (Vector2)car.transform.position : new Vector2(d.carX, d.carY));
 
-            if (Services.TryGet(out ITimeOfDay clock)) clock.SetTime(d.hour);
+            if (Services.TryGet(out ITimeOfDay clock)) { clock.SetDay(d.day); clock.SetTime(d.hour); }
             var calls = UnityEngine.Object.FindAnyObjectByType<CalloutManager>();
             if (calls != null) { calls.SetDuty(false, false); calls.RestoreStats(d.completed, d.failed, d.arrests); }   // you always start off duty
             PlaySeconds = d.playSeconds;

@@ -7,9 +7,8 @@ namespace GPA.Game
 {
     /// <summary>
     /// The 1st Precinct's basement garage.
-    /// - Outside: an animated roll-up garage door in the precinct's side wall. It rolls up when the
-    ///   officer (on foot or driving) comes near and rolls down again after they leave. Driving or
-    ///   walking into the open door takes you down the ramp into the basement.
+    /// - Outside: an open garage entrance in the precinct's side wall, marked by a steel barrier
+    ///   frame and hazard stripes. Driving or walking into it takes you down the ramp into the basement.
     /// - Inside the precinct: the ground-floor stairs also lead down to the basement.
     /// - The basement: a lit parking level with the fleet parked in bays, the vehicle sign-out desk,
     ///   stairs back up into the station and the ramp back out to the street.
@@ -32,14 +31,10 @@ namespace GPA.Game
         private InteriorManager2D _interiors;
         private Vector2 _door, _out, _along;          // door centre on the wall, outward normal, along the wall
         private const float DoorWidth = 5.2f;
-        private float _open;                           // 0 closed .. 1 fully rolled up
         private float _cooldown = -10f;
-        private Transform _shutter, _doorRoot;
-        private SpriteRenderer _mouth;
-        private readonly List<SpriteRenderer> _slats = new List<SpriteRenderer>();
+        private Transform _doorRoot;
         private BuildingInterior2D _stairsAddedTo;
         private GUIStyle _tag;
-        private AudioSource _motor;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -112,10 +107,7 @@ namespace GPA.Game
             root.position = _door;
             root.rotation = Quaternion.FromToRotation(Vector3.up, _out);   // local up = outward, local right = along the wall
 
-            // The dark ramp mouth behind the door (visible once it rolls up), drawn over the roof.
-            _mouth = Quad(root, new Vector2(0f, -1.6f), new Vector2(DoorWidth, 3.2f), new Color(0.06f, 0.06f, 0.07f), Sorting2D.Roofs, 20);
-            Quad(root, new Vector2(0f, -2.8f), new Vector2(DoorWidth, 0.8f), new Color(0.02f, 0.02f, 0.02f), Sorting2D.Roofs, 21);
-            // Frame: posts at each side and a header.
+            // Barrier frame: posts at each side and a header bar, marking where the garage is.
             Quad(root, new Vector2(-DoorWidth * 0.5f - 0.2f, -0.2f), new Vector2(0.4f, 0.9f), new Color(0.3f, 0.32f, 0.36f), Sorting2D.Roofs, 25);
             Quad(root, new Vector2(DoorWidth * 0.5f + 0.2f, -0.2f), new Vector2(0.4f, 0.9f), new Color(0.3f, 0.32f, 0.36f), Sorting2D.Roofs, 25);
             Quad(root, new Vector2(0f, -0.45f), new Vector2(DoorWidth + 0.8f, 0.35f), new Color(0.24f, 0.26f, 0.3f), Sorting2D.Roofs, 26);
@@ -127,21 +119,6 @@ namespace GPA.Game
             }
             // "POLICE VEHICLES ONLY" paint on the apron.
             Quad(root, new Vector2(0f, 1.6f), new Vector2(DoorWidth - 0.6f, 0.12f), new Color(1f, 1f, 1f, 0.7f), Sorting2D.Props, 12);
-
-            // The shutter: a slatted panel that rolls up into the header (scales toward it).
-            _shutter = new GameObject("Shutter").transform;
-            _shutter.SetParent(root, false);
-            _shutter.localPosition = new Vector2(0f, -0.3f);
-            for (int i = 0; i < 9; i++)
-            {
-                var slat = Quad(_shutter, new Vector2(0f, -0.2f - i * 0.36f), new Vector2(DoorWidth, 0.3f),
-                    i % 2 == 0 ? new Color(0.62f, 0.64f, 0.68f) : new Color(0.55f, 0.57f, 0.61f), Sorting2D.Roofs, 22);
-                _slats.Add(slat);
-            }
-
-            _motor = gameObject.AddComponent<AudioSource>();
-            _motor.playOnAwake = false; _motor.loop = true; _motor.spatialBlend = 0f; _motor.volume = 0.25f;
-            _motor.clip = MotorHum();
         }
 
         // ------------------------------------------------------------------ the basement level
@@ -270,28 +247,18 @@ namespace GPA.Game
             var inside = _interiors != null ? _interiors.Current : null;
             bool inStation = inside != null && inside.BuildingId == _precinct.Id;
             if (_doorRoot != null && _doorRoot.gameObject.activeSelf == inStation) _doorRoot.gameObject.SetActive(!inStation);
-            if (inStation) { if (_motor.isPlaying) _motor.Stop(); return; }
+            if (inStation) return;
 
-            // The door rolls up for the officer when they are close outside (or have just driven out).
             Vector2 rel = p - _door;
-            bool near = !InBasement && Vector2.Dot(rel, _out) > -0.5f && rel.magnitude < 10f && (car == null || !car.Hover);
-            float target = near || _cooldown > -2f ? 1f : 0f;
-            float before = _open;
-            _open = Mathf.MoveTowards(_open, target, dt * 0.75f);
-            bool moving = Mathf.Abs(_open - before) > 0.0001f;
-            if (moving && !_motor.isPlaying) _motor.Play();
-            else if (!moving && _motor.isPlaying) _motor.Stop();
-            ApplyShutter();
-
             if (_cooldown > 0f) return;
             if (!InBasement)
             {
-                // Into the open door: within the opening and heading into the wall.
+                // Into the entrance: within the opening and heading into the wall (helicopters fly over it).
                 float across = Vector2.Dot(rel, _along), outward = Vector2.Dot(rel, _out);
                 bool inOpening = Mathf.Abs(across) < DoorWidth * 0.5f - 0.3f && outward < (car != null ? 3.2f : 1.2f) && outward > -0.3f;
                 bool heading = Vector2.Dot(vel, -_out) > 0.4f ||
                                (car != null ? Vector2.Dot(car.transform.up, -_out) > 0.7f && outward < 2.9f : Vector2.Dot(_officer.Facing, -_out) > 0.7f && outward < 0.9f);
-                if (_open > 0.85f && inOpening && heading) GoDown(car);
+                if (inOpening && heading && (car == null || !car.Hover)) GoDown(car);
             }
             else
             {
@@ -300,21 +267,6 @@ namespace GPA.Game
                 bool westward = vel.x < -0.2f || (car != null ? car.transform.up.x < -0.6f : _officer.Facing.x < -0.6f);
                 if (local.x < 1.6f && local.y > LaneY0 && local.y < LaneY1 && westward) GoOut(car);
             }
-        }
-
-        private void ApplyShutter()
-        {
-            // Slats disappear into the header from the bottom up; the last slats compress as it rolls.
-            float shown = (1f - _open) * _slats.Count;
-            for (int i = 0; i < _slats.Count; i++)
-            {
-                float k = Mathf.Clamp01(shown - (_slats.Count - 1 - i));
-                _slats[i].enabled = k > 0.01f;
-                var t = _slats[i].transform;
-                t.localPosition = new Vector3(0f, -0.2f - i * 0.36f * (1f - _open * 0.6f), 0f);
-            }
-            _shutter.localPosition = new Vector3(0f, -0.3f + _open * 0.15f, 0f);
-            _mouth.color = Color.Lerp(new Color(0.06f, 0.06f, 0.07f, 0f), new Color(0.06f, 0.06f, 0.07f, 1f), _open);
         }
 
         private void GoDown(Car2D car)
@@ -328,7 +280,6 @@ namespace GPA.Game
         private void GoOut(Car2D car)
         {
             _cooldown = 1.5f;
-            _open = 1f;
             float heading = Vector2.SignedAngle(Vector2.up, _out);
             Vector2 apron = _door + _out * (car != null ? 4f : 2f);
             if (car != null) Teleport(car, apron, heading, 4f);
@@ -436,23 +387,6 @@ namespace GPA.Game
             var mr = go.GetComponent<MeshRenderer>();
             if (tm.font != null) mr.sharedMaterial = tm.font.material;
             Sorting2D.Apply(mr, Sorting2D.Props, 20);
-        }
-
-        /// <summary>A low electric-motor hum for the roll-up door.</summary>
-        private static AudioClip MotorHum()
-        {
-            const int rate = 22050; int n = rate;
-            var data = new float[n];
-            var r = new System.Random(5);
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)rate;
-                data[i] = 0.35f * Mathf.Sin(2f * Mathf.PI * 95f * t) + 0.15f * Mathf.Sin(2f * Mathf.PI * 190f * t)
-                        + 0.12f * ((float)r.NextDouble() * 2f - 1f) * (0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * 9f * t));
-            }
-            var clip = AudioClip.Create("GarageDoorMotor", n, 1, rate, false);
-            clip.SetData(data, 0);
-            return clip;
         }
     }
 }

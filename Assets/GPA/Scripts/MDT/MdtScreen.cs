@@ -15,8 +15,8 @@ namespace GPA.Mdt
     /// </summary>
     internal sealed partial class MdtScreen
     {
-        private enum Tab { Dashboard, Persons, Vehicles, Warrants, Bolos, Citations, Reports, Dispatch, Booking }
-        private const int TabCount = 9;
+        private enum Tab { Dashboard, Persons, Vehicles, Warrants, Bolos, Citations, Arrests, Reports, Dispatch, Booking }
+        private const int TabCount = 10;
 
         private struct Pick<T>
         {
@@ -149,7 +149,7 @@ namespace GPA.Mdt
                 if (stop.CitizenId != null) Person(stop.CitizenId, tag);
                 if (stop.VehicleId != null) Car(stop.VehicleId, tag);
             }
-            string today = DateTime.Now.ToString("yyyy-MM-dd");
+            string today = GameClock.Today;
             for (int i = _db.Data.Arrests.Count - 1; i >= 0; i--)
             {
                 var a = _db.Data.Arrests[i];
@@ -256,6 +256,9 @@ namespace GPA.Mdt
                     break;
                 case Tab.Citations:
                     OpenKeyboard("field:cf", "Filter citations by name, plate, offense or number", () => _citationFilter, v => { _citationFilter = v; _sel[(int)Tab.Citations] = 0; }, 64, false, caps: true);
+                    break;
+                case Tab.Arrests:
+                    OpenKeyboard("field:af", "Filter arrests by name, booking number or charge", () => _arrestFilter, v => { _arrestFilter = v; _sel[(int)Tab.Arrests] = 0; }, 64, false, caps: true);
                     break;
             }
         }
@@ -460,6 +463,7 @@ namespace GPA.Mdt
                 case Tab.Dashboard: DrawDashboardTab(); break;
                 case Tab.Bolos: DrawBolosTab(); break;
                 case Tab.Citations: DrawCitationsTab(); break;
+                case Tab.Arrests: DrawArrestsTab(); break;
                 case Tab.Dispatch: DrawDispatchTab(); break;
                 case Tab.Booking: DrawBookingTab(); break;
             }
@@ -610,17 +614,27 @@ namespace GPA.Mdt
             GUI.Label(new Rect(header.x + 24, header.y + 36, header.width * 0.5f, 24), "MOBILE DATA TERMINAL  ·  RECORDS", _s.Small);
             var right = GuiStyleCache.With(_s.Small, TextAnchor.UpperRight);
             GUI.Label(new Rect(header.xMax - 824, header.y + 10, 800, 24), $"<b>UNIT {_unit}</b>   {StatusText()}", right);
-            GUI.Label(new Rect(header.xMax - 824, header.y + 36, 800, 24), $"{Escape(_officerLocation)}   ·   {DateTime.Now:ddd dd MMM yyyy  HH:mm}", right);
+            GUI.Label(new Rect(header.xMax - 824, header.y + 36, 800, 24), $"{Escape(_officerLocation)}   ·   {GameClock.Now:ddd dd MMM yyyy  HH:mm}", right);
 
-            string[] names = { "DASHBOARD", "PERSONS", "VEHICLES", $"WARRANTS ({_wanted.Count})", $"BOLOS ({ActiveBoloCount()})", "CITATIONS", $"REPORTS ({_db.Data.Reports.Count})", "DISPATCH", BookingTabLabel() };
+            string[] names = { "DASHBOARD", "PERSONS", "VEHICLES", $"WARRANTS ({_wanted.Count})", $"BOLOS ({ActiveBoloCount()})", "CITATIONS", $"ARRESTS ({_db.Data.Arrests.Count})", $"REPORTS ({_db.Data.Reports.Count})", "DISPATCH", BookingTabLabel() };
             float tabW = Mathf.Min(232f, (panel.width - 40) / TabCount);
             for (int i = 0; i < TabCount; i++)
             {
                 var r = new Rect(panel.x + 20 + i * tabW, header.yMax + 12, tabW - 10, 48);
                 GUI.DrawTexture(r, (int)_tab == i ? _s.TabOn : _s.TabOff);
-                if (Btn(r, names[i], _s.Tab, $"tab:{i}")) SelectTab((Tab)i);
+                // Ten tabs: a long label ("WARRANTS (111)") drops to a smaller size rather than wrapping.
+                GUIStyle style = _s.Tab;
+                if (style.CalcSize(new GUIContent(names[i])).x > r.width - 12f)
+                {
+                    _tabSmall ??= new GUIStyle(_s.Tab) { wordWrap = false };
+                    _tabSmall.fontSize = Mathf.Max(11, _s.Tab.fontSize - 3);
+                    style = _tabSmall;
+                }
+                if (Btn(r, names[i], style, $"tab:{i}")) SelectTab((Tab)i);
             }
         }
+
+        private GUIStyle _tabSmall;
 
         private void DrawFooter(Rect r)
         {
@@ -738,7 +752,11 @@ namespace GPA.Mdt
             var arrests = _db.ArrestsOf(c.Id);
             y = Section(y, w, $"ARRESTS ({arrests.Count})");
             if (arrests.Count == 0) y = Line(y, w, "<color=#9aa3ad>None</color>");
-            foreach (var a in arrests) y = Line(y, w, $"<color=#9aa3ad>{a.Date}</color>   {string.Join(", ", a.Charges)}   <color=#9aa3ad>{a.Location}</color>");
+            for (int i = arrests.Count - 1; i >= 0; i--)   // newest first; each opens the full arrest record
+            {
+                var a = arrests[i];
+                if (LinkButton(ref y, w, $"<b>{BookingNo(a)}</b>   {Escape(string.Join(", ", a.Charges))}   <color=#9aa3ad>{a.Date}</color>", $"det:arr:{i}")) { ShowArrest(a); break; }
+            }
 
             y = ReportLinks(y, w, c.Id);
             _detailHeight = y + 20;
@@ -1072,7 +1090,7 @@ namespace GPA.Mdt
         private static int Age(string dob)
         {
             if (!DateTime.TryParse(dob, out var d)) return 0;
-            var today = DateTime.Today;
+            var today = GameClock.Now.Date;   // ages in the game's year
             int age = today.Year - d.Year;
             if (today < d.AddYears(age)) age--;
             return age;

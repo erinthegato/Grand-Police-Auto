@@ -33,9 +33,15 @@ MonoBehaviour:
     Mass: 1500
     TopSpeed: 34
     Acceleration: 7.5
-    Braking: 26
+    Braking: 24
     TurnRate: 190
     Grip: 9
+    SteerResponse: 9
+    HighSpeedTurn: 0.7
+    HandbrakeGrip: 1.2
+    PowerFade: 0.35
+    PowerSlide: 0.1
+    CoastDrag: 3.5
     Lightbar: 0
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
@@ -59,9 +65,15 @@ MonoBehaviour:
     Mass: 1500
     TopSpeed: 34
     Acceleration: 7.5
-    Braking: 26
+    Braking: 23
     TurnRate: 190
-    Grip: 9
+    Grip: 8.5
+    SteerResponse: 8
+    HighSpeedTurn: 0.68
+    HandbrakeGrip: 1.1
+    PowerFade: 0.4
+    PowerSlide: 0.1
+    CoastDrag: 3.5
     Lightbar: 0
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
@@ -93,9 +105,15 @@ MonoBehaviour:
     Mass: 1100
     TopSpeed: 30
     Acceleration: 8
-    Braking: 26
+    Braking: 23
     TurnRate: 210
     Grip: 9
+    SteerResponse: 13
+    HighSpeedTurn: 0.8
+    HandbrakeGrip: 1.4
+    PowerFade: 0.5
+    PowerSlide: 0
+    CoastDrag: 4
     Lightbar: 0
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
@@ -127,9 +145,15 @@ MonoBehaviour:
     Mass: 2100
     TopSpeed: 32
     Acceleration: 7
-    Braking: 26
+    Braking: 22
     TurnRate: 175
-    Grip: 9
+    Grip: 7.8
+    SteerResponse: 6.5
+    HighSpeedTurn: 0.6
+    HandbrakeGrip: 1
+    PowerFade: 0.4
+    PowerSlide: 0.05
+    CoastDrag: 3
     Lightbar: 0
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
@@ -161,9 +185,15 @@ MonoBehaviour:
     Mass: 2300
     TopSpeed: 31
     Acceleration: 6.8
-    Braking: 26
+    Braking: 21
     TurnRate: 170
-    Grip: 9
+    Grip: 7.5
+    SteerResponse: 6.5
+    HighSpeedTurn: 0.62
+    HandbrakeGrip: 0.8
+    PowerFade: 0.4
+    PowerSlide: 0.35
+    CoastDrag: 3
     Lightbar: 0
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
@@ -190,9 +220,15 @@ MonoBehaviour:
     Mass: 2800
     TopSpeed: 26
     Acceleration: 5.5
-    Braking: 26
+    Braking: 19
     TurnRate: 150
-    Grip: 9
+    Grip: 7
+    SteerResponse: 5
+    HighSpeedTurn: 0.55
+    HandbrakeGrip: 1
+    PowerFade: 0.55
+    PowerSlide: 0
+    CoastDrag: 2.8
     Lightbar: 0
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
@@ -219,9 +255,15 @@ MonoBehaviour:
     Mass: 6500
     TopSpeed: 22
     Acceleration: 4
-    Braking: 18
+    Braking: 15
     TurnRate: 120
-    Grip: 9
+    Grip: 7
+    SteerResponse: 3.5
+    HighSpeedTurn: 0.48
+    HandbrakeGrip: 1.4
+    PowerFade: 0.65
+    PowerSlide: 0
+    CoastDrag: 2.2
     Lightbar: 0
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
@@ -244,14 +286,20 @@ MonoBehaviour:
     Mass: 1600
     TopSpeed: 40
     Acceleration: 9
-    Braking: 26
+    Braking: 30
     TurnRate: 195
-    Grip: 9
+    Grip: 10
+    SteerResponse: 11
+    HighSpeedTurn: 0.72
+    HandbrakeGrip: 1.2
+    PowerFade: 0.25
+    PowerSlide: 0.15
+    CoastDrag: 3.5
     Lightbar: 1
     LightbarForward: 0.19
     LightbarHalfWidth: 0.38
     RequiredLevel: 1
-    Blurb: All-round patrol car.
+    Blurb: 'All-round patrol car: sharp, predictable.'
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 0
@@ -269,14 +317,20 @@ MonoBehaviour:
     Mass: 2300
     TopSpeed: 38
     Acceleration: 8.5
-    Braking: 26
+    Braking: 28
     TurnRate: 180
-    Grip: 9
+    Grip: 9.5
+    SteerResponse: 8
+    HighSpeedTurn: 0.65
+    HandbrakeGrip: 1.6
+    PowerFade: 0.3
+    PowerSlide: 0
+    CoastDrag: 3.2
     Lightbar: 1
     LightbarForward: 0.67
     LightbarHalfWidth: 0.39
     RequiredLevel: 1
-    Blurb: Roomier, tougher, a bit slower.
+    Blurb: Planted all-wheel drive. Slower to turn in.
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 0
@@ -296,12 +350,18 @@ MonoBehaviour:
     Acceleration: 8
     Braking: 26
     TurnRate: 172
-    Grip: 9
+    Grip: 8.5
+    SteerResponse: 7
+    HighSpeedTurn: 0.62
+    HandbrakeGrip: 1
+    PowerFade: 0.3
+    PowerSlide: 0.3
+    CoastDrag: 3
     Lightbar: 1
     LightbarForward: 0.79
     LightbarHalfWidth: 0.39
     RequiredLevel: 2
-    Blurb: Heavy-duty truck, good at pushing.
+    Blurb: Heavy-duty truck; the tail steps out under power.
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 0
@@ -319,14 +379,20 @@ MonoBehaviour:
     Mass: 300
     TopSpeed: 46
     Acceleration: 12
-    Braking: 26
+    Braking: 30
     TurnRate: 240
     Grip: 12
+    SteerResponse: 16
+    HighSpeedTurn: 0.82
+    HandbrakeGrip: 2.4
+    PowerFade: 0.2
+    PowerSlide: 0
+    CoastDrag: 4
     Lightbar: 1
     LightbarForward: -0.52
     LightbarHalfWidth: 0.19
     RequiredLevel: 2
-    Blurb: Nimble, quick, slips through traffic.
+    Blurb: Nimble and quick. Slips through traffic.
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 1
@@ -344,14 +410,20 @@ MonoBehaviour:
     Mass: 1600
     TopSpeed: 42
     Acceleration: 9.5
-    Braking: 26
+    Braking: 29
     TurnRate: 195
-    Grip: 9
+    Grip: 9.5
+    SteerResponse: 10
+    HighSpeedTurn: 0.7
+    HandbrakeGrip: 1
+    PowerFade: 0.25
+    PowerSlide: 0.3
+    CoastDrag: 3.5
     Lightbar: 1
     LightbarForward: 0.42
     LightbarHalfWidth: 0.2
     RequiredLevel: 3
-    Blurb: Plain car with hidden dash lights.
+    Blurb: 'Rear-drive sleeper: slides if you push it.'
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 0
@@ -369,14 +441,20 @@ MonoBehaviour:
     Mass: 3200
     TopSpeed: 30
     Acceleration: 6
-    Braking: 26
+    Braking: 22
     TurnRate: 150
-    Grip: 9
+    Grip: 8
+    SteerResponse: 5.5
+    HighSpeedTurn: 0.55
+    HandbrakeGrip: 1.3
+    PowerFade: 0.5
+    PowerSlide: 0
+    CoastDrag: 2.8
     Lightbar: 1
     LightbarForward: 1.75
     LightbarHalfWidth: 0.44
     RequiredLevel: 3
-    Blurb: Van with a caged rear for prisoners.
+    Blurb: Big caged van. Brake early.
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 0
@@ -394,14 +472,20 @@ MonoBehaviour:
     Mass: 1600
     TopSpeed: 50
     Acceleration: 12
-    Braking: 26
+    Braking: 34
     TurnRate: 205
-    Grip: 9
+    Grip: 11
+    SteerResponse: 13
+    HighSpeedTurn: 0.76
+    HandbrakeGrip: 1.1
+    PowerFade: 0.15
+    PowerSlide: 0.35
+    CoastDrag: 3.8
     Lightbar: 1
     LightbarForward: 0
     LightbarHalfWidth: 0.3
     RequiredLevel: 4
-    Blurb: Fastest car in the fleet, for pursuits.
+    Blurb: Fastest in the fleet. Huge brakes, lively rear.
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 0
@@ -419,14 +503,20 @@ MonoBehaviour:
     Mass: 8000
     TopSpeed: 28
     Acceleration: 5
-    Braking: 26
+    Braking: 17
     TurnRate: 135
-    Grip: 9
+    Grip: 8.5
+    SteerResponse: 3
+    HighSpeedTurn: 0.48
+    HandbrakeGrip: 2
+    PowerFade: 0.7
+    PowerSlide: 0
+    CoastDrag: 2.4
     Lightbar: 1
     LightbarForward: 1.16
     LightbarHalfWidth: 0.33
     RequiredLevel: 5
-    Blurb: Armored rescue vehicle. Nothing stops it.
+    Blurb: Armored and slow to steer. Nothing stops it.
     Helicopter: 0
     RotorSprite: {fileID: 0}
     Motorcycle: 0
@@ -447,6 +537,12 @@ MonoBehaviour:
     Braking: 12
     TurnRate: 110
     Grip: 2.2
+    SteerResponse: 4
+    HighSpeedTurn: 1
+    HandbrakeGrip: 2.2
+    PowerFade: 0.2
+    PowerSlide: 0
+    CoastDrag: 1.6
     Lightbar: 1
     LightbarForward: 1.1
     LightbarHalfWidth: 0.25

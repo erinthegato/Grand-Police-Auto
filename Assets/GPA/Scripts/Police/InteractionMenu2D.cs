@@ -133,7 +133,7 @@ namespace GPA.Police
             float width = 620f;
             float logH = _log.Count * 24f + 8f;
             float height = 96f + logH + _options.Count * 34f + 34f;
-            var r = new Rect(w - width - 30f, 140f, width, height);
+            var r = UiScale.AvoidMinimap(new Rect(w - width - 30f, 140f, width, height), w);
             GUI.DrawTexture(r, _panel);
             GUI.DrawTexture(new Rect(r.x, r.y, 6, r.height), _highlight);
             GUI.Label(new Rect(r.x + 20, r.y + 10, width - 40, 32), _title, _titleStyle);

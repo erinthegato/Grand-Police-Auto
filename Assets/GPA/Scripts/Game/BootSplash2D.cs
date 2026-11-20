@@ -208,7 +208,7 @@ namespace GPA.Game
             float end = _skipping ? Mathf.Clamp01(_skipFade) : Mathf.Clamp01((t - (Total - FadeOut)) / FadeOut);
             if (end > 0f) { GUI.color = new Color(0, 0, 0, end); GUI.DrawTexture(full, Texture2D.whiteTexture); }
 
-            if (t > 1.5f && !_skipping)
+            if (t > 1.5f && !_skipping && end < 0.05f)   // hidden once the closing fade starts, so it never sits alone on black
             {
                 _tiny.fontSize = Mathf.RoundToInt(18 * s);
                 Text(new Rect(0, H - 60f * s, W - 40f * s, 40f * s), "Press any button to skip", _tiny, new Color(1f, 1f, 1f, 0.4f * (0.6f + 0.4f * Mathf.Sin(t * 3f))), 0, 0, TextAnchor.MiddleRight);

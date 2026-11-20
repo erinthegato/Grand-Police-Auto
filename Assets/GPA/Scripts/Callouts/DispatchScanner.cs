@@ -40,8 +40,8 @@ namespace GPA.Callouts
             _static = Noise("static", 1.5f);
             var lib = GameAudio.Library;   // recorded radio sounds when available
             if (lib != null && lib.RadioChirp != null) _chirpIn = _chirpOut = lib.RadioChirp;
-            // The recorded static clip has babbling voices in it; under real speech use the plain hiss.
-            if (lib != null && lib.RadioStatic != null && !RadioSpeech.Available) _static = lib.RadioStatic;
+            // The recorded static clip (lib.RadioStatic) is placeholder chatter with babbling voices in
+            // it, so the radio always uses the plain procedural hiss under the lines.
         }
 
         /// <summary>Queue lines to be read. {unit} is replaced with the player's unit number.</summary>

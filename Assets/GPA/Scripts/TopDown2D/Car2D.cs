@@ -49,6 +49,15 @@ namespace GPA.TopDown2D
         [SerializeField] private float _handbrakeTurnBoost = 1.35f;
         [SerializeField] private float _handbrakeDrag = 10f;
 
+        [Header("Character")]
+        [Tooltip("How fast the player's steering reaches full lock, per second (AI steers instantly).")]
+        [SerializeField] private float _steerResponse = 10f;
+        [Tooltip("0..1: engine pull lost near top speed.")]
+        [SerializeField] private float _powerFade = 0f;
+        [Tooltip("0..1: rear-drive tail slide when steering on the throttle.")]
+        [SerializeField] private float _powerSlide = 0f;
+        private float _steerNow;
+
         private Rigidbody2D _rb;
         private IVehicleControlInput _input = IdleVehicleControl.Instance;
 
@@ -104,6 +113,22 @@ namespace GPA.TopDown2D
             if (GetComponent<CarFx2D>() == null) gameObject.AddComponent<CarFx2D>();
         }
 
+        /// <summary>
+        /// Cars made without a catalog type (the starting patrol car, parked cars, callout cars) still
+        /// get their real handling: the type is looked up from the body sprite.
+        /// </summary>
+        private void Start()
+        {
+            if (Spec != null || VehicleCatalog.Instance == null) return;
+            foreach (var sr in GetComponentsInChildren<SpriteRenderer>(true))
+            {
+                if (sr.name != "Body" || sr.sprite == null) continue;
+                var spec = VehicleCatalog.Instance.BySprite(sr.sprite.name, out Sprite paint);
+                if (spec != null) ApplySpec(spec, paint);
+                return;
+            }
+        }
+
         /// <summary>The catalog type this car was built as (null for scene-placed cars).</summary>
         public VehicleSpec Spec { get; private set; }
         /// <summary>Hovering vehicles (helicopter) turn on the spot and have no reverse limit.</summary>
@@ -119,6 +144,8 @@ namespace GPA.TopDown2D
             Spec = spec;
             _mass = spec.Mass; _topSpeed = spec.TopSpeed; _acceleration = spec.Acceleration;
             _braking = spec.Braking; _turnRate = spec.TurnRate; _grip = spec.Grip;
+            _steerResponse = spec.SteerResponse; _topSpeedTurnScale = spec.HighSpeedTurn; _handbrakeGrip = spec.HandbrakeGrip;
+            _powerFade = spec.PowerFade; _powerSlide = spec.PowerSlide; _coastDrag = spec.CoastDrag;
             _reverseTopSpeed = spec.Helicopter ? spec.TopSpeed * 0.5f : spec.Motorcycle ? 5f : 9f;
             _reverseAcceleration = spec.Helicopter ? spec.Acceleration : 8f;
             Hover = spec.Helicopter;
@@ -184,6 +211,9 @@ namespace GPA.TopDown2D
             float throttle = parked ? 0f : Mathf.Clamp01(_input.Throttle);
             float brake = parked ? 0f : Mathf.Clamp01(_input.Brake);
             float steer = parked ? 0f : Mathf.Clamp(_input.Steer, -1f, 1f);
+            // Heavy vehicles take a moment to turn in; light ones snap. AI drivers keep instant steering.
+            _steerNow = IsPlayerDriven ? Mathf.MoveTowards(_steerNow, steer, _steerResponse * dt) : steer;
+            steer = _steerNow;
             bool handbrake = !parked && _input.Handbrake;
 
             Vector2 forward = transform.up;
@@ -196,7 +226,12 @@ namespace GPA.TopDown2D
             if (throttle > 0.05f)
             {
                 if (speed < 0f) speed = Mathf.MoveTowards(speed, 0f, _braking * throttle * dt);
-                else speed = Mathf.MoveTowards(speed, _topSpeed, _acceleration * throttle * dt);
+                else
+                {
+                    // Engines lose pull as they near top speed (big, heavy ones more).
+                    float pull = 1f - _powerFade * Mathf.Pow(Mathf.Clamp01(speed / _topSpeed), 2f);
+                    speed = Mathf.MoveTowards(speed, _topSpeed, _acceleration * Mathf.Max(0.15f, pull) * throttle * dt);
+                }
             }
             else if (brake > 0.05f)
             {
@@ -219,7 +254,11 @@ namespace GPA.TopDown2D
             _rb.angularVelocity = rate;
 
             // ---- Grip: bleed off sideways slide.
-            lateral *= Mathf.Exp(-(handbrake ? _handbrakeGrip : _grip) * dt);
+            float grip = handbrake ? _handbrakeGrip : _grip;
+            // Rear-drive cars step the tail out when you steer hard on the throttle at speed.
+            float slide = _powerSlide * throttle * Mathf.Abs(steer) * Mathf.Clamp01(Mathf.Abs(speed) / (_topSpeed * 0.5f));
+            grip *= 1f - Mathf.Clamp01(slide) * 0.75f;
+            lateral *= Mathf.Exp(-grip * dt);
             RearSlide = Mathf.Clamp01(Mathf.Abs(lateral) / 6f);
 
             _rb.linearVelocity = forward * speed + right * lateral;

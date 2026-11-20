@@ -45,6 +45,7 @@ namespace GPA.Core
         public string location;          // where they were arrested
         public float x, y;               // where they are now
         public bool inCar;               // seated in the back of the patrol car
+        public string callId, callCode, callTitle;   // the call they were arrested on, if any
         public List<string> charges = new List<string>();
         public List<string> selected = new List<string>();
     }
@@ -63,5 +64,6 @@ namespace GPA.Core
     public static class MdtPages
     {
         public const string Booking = "booking";
+        public const string Arrests = "arrests";
     }
 }

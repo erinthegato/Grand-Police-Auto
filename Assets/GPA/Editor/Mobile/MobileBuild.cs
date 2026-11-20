@@ -43,7 +43,7 @@ namespace GPA.EditorTools
             string directory = Path.Combine(OutputRoot, "Android");
             Directory.CreateDirectory(directory);
 
-            string fileName = $"GrandPoliceAuto-{PlayerSettings.bundleVersion}.{extension}";
+            string fileName = $"LightsAndSirensHalden-{PlayerSettings.bundleVersion}.{extension}";
             string path = Path.Combine(directory, fileName).Replace('\\', '/');
 
             Build(BuildTarget.Android, BuildTargetGroup.Android, path,

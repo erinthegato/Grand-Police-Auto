@@ -12,7 +12,7 @@ namespace GPA.Game
     [RequireComponent(typeof(AudioSource))]
     public sealed class MusicSynth : MonoBehaviour
     {
-        public enum Style { Synthwave, LoFi, Rock, Theme, DrumAndBass, House, Dubstep, Classical }
+        public enum Style { Synthwave, LoFi, Rock, Theme, DrumAndBass, House, Dubstep, Classical, Futurecore }
 
         // ---- song description (built on the main thread, read on the audio thread) ------------
         private sealed class Song
@@ -102,7 +102,7 @@ namespace GPA.Game
             var s = new Song { Style = style, Bars = 32 };
             string[] forms = { "Nocturne", "Sonata", "Prelude", "Serenade", "Étude", "Adagio" };
             string[] keys = { "C", "D", "E", "F", "G", "A", "B flat" };
-            s.Title = style == Style.Theme ? "Grand Police Auto — Main Theme"
+            s.Title = style == Style.Theme ? "Lights & Sirens: Halden — Main Theme"
                 : style == Style.Classical ? $"{forms[r.Next(forms.Length)]} No. {1 + r.Next(9)} in {keys[r.Next(keys.Length)]} — Halden Chamber Players"
                 : $"{Artists[r.Next(Artists.Length)]} — {Adjectives[r.Next(Adjectives.Length)]} {Nouns[r.Next(Nouns.Length)]}";
             switch (style)
@@ -142,6 +142,12 @@ namespace GPA.Game
                     s.Chords = Pick(r, new[] { new[] { 0, 0, 5, 6 }, new[] { 0, 3, 0, 4 }, new[] { 0, 5, 0, 6 } });
                     Beat(s, kick: "x.........x.....", snare: "........x.......", hat: "x.x.x.x.x.x.x.x.", open: "................");
                     BassLine(s, r, "x.......x.......");
+                    break;
+                case Style.Futurecore:   // hardcore drums under bright future-bass supersaws
+                    s.Bpm = 168 + r.Next(10); s.Scale = Major; s.Root = 45 + r.Next(5); s.Swing = 0f;
+                    s.Chords = Pick(r, new[] { new[] { 3, 4, 5, 0 }, new[] { 5, 3, 0, 4 }, new[] { 0, 4, 5, 3 }, new[] { 3, 4, 2, 5 } });
+                    Beat(s, kick: "x...x...x...x...", snare: "....x.......x...", hat: "..x...x...x...x.", open: "..x...x...x...x.");
+                    BassLine(s, r, "..x...x...x...x.");
                     break;
                 case Style.Classical:
                     s.Bpm = 76 + r.Next(16); s.Scale = r.Next(2) == 0 ? Major : Minor; s.Root = 48 + r.Next(7); s.Swing = 0f; s.NoDrums = true;
@@ -294,13 +300,13 @@ namespace GPA.Game
                 int m = mel[(bar % 4) * 16 + inBar];
                 if (m != -99)
                 {
-                    int osc = s.Style == Style.Synthwave ? 2 : s.Style == Style.LoFi || s.Style == Style.Classical ? 3 : s.Style == Style.House ? 2 : 1;
+                    int osc = s.Style == Style.Synthwave ? 2 : s.Style == Style.Futurecore ? 1 : s.Style == Style.LoFi || s.Style == Style.Classical ? 3 : s.Style == Style.House ? 2 : 1;
                     float amp = s.Style == Style.Rock ? 0.09f : 0.1f;
                     float len = stepSec * (s.Style == Style.LoFi || s.Style == Style.Theme ? 3.5f : 1.8f);
                     Note(Midi(Degree(s, m) + 12), osc, amp, 0.01f, 0.2f, 0.6f, 0.15f, len, s.Style == Style.LoFi ? 2200f : 3500f, 0.003f);
                 }
                 // Arpeggios: synthwave and house plucks, classical broken chords.
-                if ((s.Style == Style.Synthwave || s.Style == Style.House || s.Style == Style.Classical && inBar % 2 == 0) && bar >= 8 && !breakdown)
+                if ((s.Style == Style.Synthwave || s.Style == Style.House || s.Style == Style.Futurecore || s.Style == Style.Classical && inBar % 2 == 0) && bar >= 8 && !breakdown)
                 {
                     int[] arp = { 0, 2, 4, 7 };
                     Note(Midi(Degree(s, chord + arp[inBar % 4]) + 24), 1, 0.04f, 0.003f, 0.08f, 0.3f, 0.05f, stepSec * 0.8f, 2600f, 0f);
@@ -355,7 +361,9 @@ namespace GPA.Game
             {
                 float f = 45f + 110f * Mathf.Exp(-_kickT * 35f);
                 _kickPhase += f * dt; if (_kickPhase > 1f) _kickPhase -= 1f;
-                sum += Mathf.Sin(_kickPhase * 2f * Mathf.PI) * Mathf.Exp(-_kickT * (s.Style == Style.DrumAndBass ? 14f : 8f)) * 0.55f;
+                float k = Mathf.Sin(_kickPhase * 2f * Mathf.PI) * Mathf.Exp(-_kickT * (s.Style == Style.DrumAndBass ? 14f : s.Style == Style.Futurecore ? 6f : 8f));
+                if (s.Style == Style.Futurecore) k = Soft(k * 5f) * 0.9f;   // distorted hardcore kick
+                sum += k * 0.55f;
                 _kickT += dt;
             }
             if (_snareT < 0.3f)

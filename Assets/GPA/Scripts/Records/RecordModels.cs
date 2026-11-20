@@ -107,15 +107,33 @@ namespace GPA.Records
         public string Officer;
     }
 
+    /// <summary>One count on an arrest: the charge, its class and the bail set for it.</summary>
+    [Serializable]
+    public sealed class ArrestCount
+    {
+        public string Charge;
+        public bool Felony;
+        public int Bail;
+    }
+
     [Serializable]
     public sealed class Arrest
     {
         public string Id;
-        public string Date;
+        public string Date;          // in-game "yyyy-MM-dd HH:mm" when booked
         public string CitizenId;
         public List<string> Charges = new List<string>();
-        public string Location;
+        public string Location;      // where the arrest was made
         public string Officer;
+        // Added with the MDT arrest records. Older saves leave these empty; the MDT fills the gaps
+        // from the charge book when it shows them.
+        public string BookingNumber; // "B25-000123"
+        public string Unit;          // arresting unit's callsign
+        public string BookedAt;      // precinct
+        public List<ArrestCount> Counts = new List<ArrestCount>();
+        public int TotalBail;
+        public string CallId, CallCode, CallTitle;   // the call the arrest came from, if any
+        public string ReportId;      // the arrest report written at booking
     }
 
     [Serializable]
@@ -131,6 +149,7 @@ namespace GPA.Records
         public string Narrative;
         public List<string> CitizenIds = new List<string>();
         public List<string> VehicleIds = new List<string>();
+        public string ArrestId;      // set on arrest reports
     }
 
     /// <summary>Everything persisted to disk.</summary>

@@ -109,7 +109,7 @@ namespace GPA.Police
         private bool ObstacleAhead(Vector2 pos, Vector2 fwd, float range)
         {
             foreach (var h in Physics2D.CircleCastAll(pos + fwd * 2.5f, 1.0f, fwd, range))
-                if (h.collider != null && !h.collider.isTrigger && h.transform != _car.transform) return true;
+                if (h.collider != null && !h.collider.isTrigger && h.transform != _car.transform && GPA.TopDown2D.Overpass2D.SameLevel(h.collider, _car)) return true;
             return false;
         }
 

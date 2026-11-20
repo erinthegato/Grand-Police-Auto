@@ -16,6 +16,7 @@ namespace GPA.Mdt
         public void ShowPage(string page)
         {
             if (page == MdtPages.Booking) SelectTab(Tab.Booking);
+            else if (page == MdtPages.Arrests) SelectTab(Tab.Arrests);
         }
 
         private string BookingTabLabel()
@@ -83,8 +84,13 @@ namespace GPA.Mdt
             GUI.enabled = canBook;
             if (Btn(new Rect(0, y, 360, 52), $"Book with {b.Selected.Count} charge(s)", _s.Primary, "book:book") && canBook)
             {
-                string name = b.Name;
-                if (desk.Book(b)) Status($"{name} booked.", false);
+                string name = b.Name, citizenId = b.CitizenId;
+                if (desk.Book(b))
+                {
+                    // File the arrest report straight away and link it to the new arrest record.
+                    var arrest = WriteReportForLatestArrest(citizenId, out var report);
+                    Status(arrest != null ? $"{name} booked · {BookingNo(arrest)}{(report != null ? $" · report {report.Id} filed" : "")}. See the Arrests tab." : $"{name} booked.", false);
+                }
             }
             GUI.enabled = true;
             if (Btn(new Rect(380, y, 320, 52), "Release without charges", _s.ButtonStyle, "book:release"))

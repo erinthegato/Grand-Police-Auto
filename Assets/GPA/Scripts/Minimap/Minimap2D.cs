@@ -432,6 +432,8 @@ namespace GPA.Minimap
             }
 
             var frame = new Rect(w - _size - 28f, 20f, _size + 8f, _size + 66f);
+            float shown = UiScale.Handheld ? 0.72f : 1f;
+            UiScale.ReportMinimap(new Rect(frame.x * shown, frame.y * shown, frame.width * shown, (frame.height + 4f) * shown));   // menus keep clear of it
             GUI.DrawTexture(frame, _panel);
             var map = new Rect(frame.x + 4f, frame.y + 4f, _size, _size);
             GUI.DrawTexture(map, _rt, ScaleMode.StretchToFill, false);

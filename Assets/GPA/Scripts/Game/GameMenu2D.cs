@@ -71,6 +71,9 @@ namespace GPA.Game
         }
 
         // ---- open / close --------------------------------------------------------------------
+        /// <summary>Opens the pause menu (for on-screen pause buttons and testing). Does nothing on the title screen.</summary>
+        public void OpenPause() { if (!_open && HasStarted) Open(Page.Pause); }
+
         private void Open(Page page)
         {
             _page = page; _row = 0; _open = true;
@@ -197,6 +200,17 @@ namespace GPA.Game
                     _rows.Add(("Master volume", $"◀ {Mathf.RoundToInt(vol * 100)}% ▶", () => SetVolume(vol >= 1f ? 0f : vol + 0.1f), d => SetVolume(vol + d * 0.1f)));
                     if (!Application.isMobilePlatform)
                         _rows.Add(("Fullscreen", Screen.fullScreen ? "◀ On ▶" : "◀ Off ▶", () => Screen.fullScreen = !Screen.fullScreen, d => Screen.fullScreen = !Screen.fullScreen));
+                    if (Services.TryGet(out IDiscordService discord) && discord.Supported)
+                    {
+                        // Discord Rich Presence: the player's choice, and on iPhone linking their account.
+                        _rows.Add(("Show activity on Discord", discord.ShowActivity ? $"◀ On ▶  {discord.StatusText}" : "◀ Off ▶",
+                            () => discord.ShowActivity = !discord.ShowActivity, d => discord.ShowActivity = !discord.ShowActivity));
+                        if (discord.NeedsLink)
+                            _rows.Add(("Discord account", discord.Linked ? "linked · select to unlink" : $"{discord.StatusText} · select to link",
+                                () => { if (discord.Linked) { discord.Unlink(); Toast("Discord unlinked"); } else discord.Link(); }, null));
+                    }
+                    _rows.Add(("Blood", GPA.TopDown2D.BloodFx2D.Enabled ? "◀ On ▶" : "◀ Off ▶",
+                        () => GPA.TopDown2D.BloodFx2D.Enabled = !GPA.TopDown2D.BloodFx2D.Enabled, d => GPA.TopDown2D.BloodFx2D.Enabled = !GPA.TopDown2D.BloodFx2D.Enabled));
                     _rows.Add(("Radio stations & volumes", "G / d-pad down in game", () => Toast("Open the radio menu in game with G or d-pad down"), null));
                     _rows.Add(("Back", "", Back, null));
                     break;
@@ -250,7 +264,7 @@ namespace GPA.Game
             float y = panel.y + 24f;
             if (title)
             {
-                GUI.Label(new Rect(panel.x, y, panelW, 70), "GRAND POLICE AUTO", _title);
+                GUI.Label(new Rect(panel.x, y, panelW, 70), "LIGHTS & SIRENS: HALDEN", new GUIStyle(_title) { fontSize = 36 });
                 GUI.Label(new Rect(panel.x, y + 70, panelW, 30), "New Halden PD · Patrol Division", _subtitle);
                 y += 130f;
                 if (_page == Page.ConfirmNew) { GUI.Label(new Rect(panel.x, y - 24, panelW, 26), "Start over? Your money, homes, cars and saved position will be lost.", _subtitle); }
@@ -296,9 +310,9 @@ namespace GPA.Game
             // Logo block: thin accent bar, two-tone name, unit line.
             GUI.DrawTexture(new Rect(x, y, 6f, 150f), _accent);
             _logo.normal.textColor = Color.white;
-            GUI.Label(new Rect(x + 28f, y - 6f, 900f, 80f), "GRAND POLICE", _logo);
+            GUI.Label(new Rect(x + 28f, y - 6f, 900f, 80f), "LIGHTS & SIRENS", _logo);
             _logo.normal.textColor = new Color(0.45f, 0.68f, 1f);
-            GUI.Label(new Rect(x + 28f, y + 62f, 900f, 80f), "AUTO", _logo);
+            GUI.Label(new Rect(x + 28f, y + 62f, 900f, 80f), "HALDEN", _logo);
             GUI.Label(new Rect(x + 30f, y + 134f, 900f, 30f), "NEW HALDEN POLICE DEPARTMENT  ·  PATROL DIVISION", _logoSub);
 
             y += 230f;

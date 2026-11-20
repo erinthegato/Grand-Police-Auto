@@ -28,6 +28,25 @@ namespace GPA.TopDown2D
         public float Braking = 26f;
         public float TurnRate = 190f;
         public float Grip = 9f;
+        [Tooltip("How fast the steering reaches full lock, per second (player only; AI steers instantly). Trucks ~3, sports cars ~13.")]
+        public float SteerResponse = 10f;
+        [Tooltip("Turn rate left at top speed (1 = same as slow). Low = wide, heavy turns when fast.")]
+        public float HighSpeedTurn = 0.7f;
+        [Tooltip("Sideways grip while the handbrake is held. Low = long slides.")]
+        public float HandbrakeGrip = 1.2f;
+        [Tooltip("0..1: how much the engine runs out of pull near top speed (0 = full pull all the way).")]
+        public float PowerFade = 0f;
+        [Tooltip("0..1: rear-drive tail slide when steering on the throttle (0 = planted).")]
+        public float PowerSlide = 0f;
+        [Tooltip("Slow-down per second off the throttle. Heavy vehicles roll further.")]
+        public float CoastDrag = 3.5f;
+
+        /// <summary>1–10 ratings for the garage menu (relative to the whole fleet).</summary>
+        public int SpeedRating => Rate(TopSpeed, 22f, 55f);
+        public int AccelRating => Rate(Acceleration, 4f, 12f);
+        public int HandlingRating => Rate(TurnRate / 240f * 0.35f + Grip / 12f * 0.35f + SteerResponse / 16f * 0.3f, 0.3f, 1f);
+        public int BrakeRating => Rate(Braking, 12f, 34f);
+        private static int Rate(float v, float lo, float hi) => Mathf.Clamp(Mathf.RoundToInt(1f + 9f * Mathf.InverseLerp(lo, hi, v)), 1, 10);
         [Header("Police")]
         public bool Lightbar;
         [Tooltip("Lightbar centre, metres forward of the vehicle centre.")]

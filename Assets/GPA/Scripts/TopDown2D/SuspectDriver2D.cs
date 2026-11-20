@@ -82,7 +82,7 @@ namespace GPA.TopDown2D
             foreach (var hit in hits)
             {
                 if (hit.collider == null || hit.collider.attachedRigidbody != null && hit.collider.attachedRigidbody.transform == _car.transform) continue;
-                if (hit.collider.isTrigger) continue;
+                if (hit.collider.isTrigger || !Overpass2D.SameLevel(hit.collider, _car)) continue;
                 return Mathf.Clamp01(hit.distance / _whiskerLength);
             }
             return 1f;

@@ -26,7 +26,7 @@ namespace GPA.Mdt
         private static ICadCallSource Cad => Services.TryGet(out ICadCallSource cad) ? cad : null;
 
         private static bool HasQuery(Tab tab) =>
-            tab == Tab.Persons || tab == Tab.Vehicles || tab == Tab.Warrants || tab == Tab.Bolos || tab == Tab.Citations;
+            tab == Tab.Persons || tab == Tab.Vehicles || tab == Tab.Warrants || tab == Tab.Bolos || tab == Tab.Citations || tab == Tab.Arrests;
 
         private int ActiveBoloCount()
         {
@@ -119,7 +119,7 @@ namespace GPA.Mdt
             var cad = Cad;
             int completed = 0, failed = 0;
             if (cad != null) foreach (var h in cad.History) { if (h.Phase == CalloutPhase.Completed) completed++; else failed++; }
-            string today = DateTime.Now.ToString("yyyy-MM-dd");
+            string today = GameClock.Today;
             int cites = 0, arrests = 0, reports = 0;
             foreach (var c in _db.Data.Citations) if (c.Date != null && c.Date.StartsWith(today)) cites++;
             foreach (var a in _db.Data.Arrests) if (a.Date != null && a.Date.StartsWith(today)) arrests++;

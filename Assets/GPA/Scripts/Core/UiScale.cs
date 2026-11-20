@@ -67,6 +67,33 @@ namespace GPA.Core
             return new Vector2(safe.x + canvas.x * f, safe.y + canvas.y * f);
         }
 
+        // ---- Screen space other HUDs keep clear of.
+        private static Rect _minimapArea;
+        private static int _minimapFrame = -100;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() { _minimapArea = Rect.zero; _minimapFrame = -100; }
+
+        /// <summary>The minimap's corner of the screen (HUD canvas units), or an empty rect when it isn't showing.</summary>
+        public static Rect MinimapArea => Time.frameCount - _minimapFrame <= 2 ? _minimapArea : Rect.zero;
+
+        /// <summary>Called by the minimap each frame it draws.</summary>
+        public static void ReportMinimap(Rect canvasArea) { _minimapArea = canvasArea; _minimapFrame = Time.frameCount; }
+
+        /// <summary>
+        /// Places a top-right panel so it doesn't sit under the minimap: beside it when there's room,
+        /// otherwise below it. <paramref name="wanted"/> is where the panel would go with no minimap.
+        /// </summary>
+        public static Rect AvoidMinimap(Rect wanted, float canvasWidth)
+        {
+            Rect map = MinimapArea;
+            if (map.width <= 0f || !wanted.Overlaps(map)) return wanted;
+            const float gap = 16f;
+            if (map.x - gap - wanted.width >= gap)
+                return new Rect(map.x - gap - wanted.width, map.y, wanted.width, wanted.height);
+            return new Rect(Mathf.Min(wanted.x, canvasWidth - wanted.width - gap), map.yMax + gap, wanted.width, wanted.height);
+        }
+
         /// <summary>Real pixels per virtual pixel (for code that draws outside the matrix).</summary>
         public static float Factor(float handheldHeight = HandheldHeight) =>
             (Handheld ? Safe.height : Screen.height) / VirtualHeight(handheldHeight);

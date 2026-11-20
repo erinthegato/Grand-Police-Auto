@@ -1,4 +1,4 @@
-# Grand Police Auto — Setup
+# Lights & Sirens: Halden — Setup
 
 Unity **6000.6.9f1**, URP 17.6. Project root: `C:\Users\joshy\Grand Police Auto`.
 

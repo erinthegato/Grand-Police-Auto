@@ -38,10 +38,14 @@ namespace GPA.Mdt
             Services.Register<IPoliceComputerService>(this);
             _activity = new MdtActivity(); // listens all shift, so "recent contacts" covers stops made before the MDT opened
             _status = new OfficerStatusService();
+            RecordsDatabase.ArrestAdded += FileArrestReport;   // every booked arrest gets its report, however it was booked
         }
+
+        private static void FileArrestReport(GPA.Records.Arrest arrest) => ArrestReports.Write(RecordsDatabase.Instance, arrest);
 
         private void OnDestroy()
         {
+            RecordsDatabase.ArrestAdded -= FileArrestReport;
             if (IsOpen) Close();
             _activity?.Dispose();
             _status?.Dispose();

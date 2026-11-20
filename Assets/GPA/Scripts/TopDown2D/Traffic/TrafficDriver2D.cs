@@ -243,7 +243,7 @@ namespace GPA.TopDown2D
         private bool BehindBlocked(Vector2 pos, Vector2 fwd)
         {
             foreach (var h in Physics2D.CircleCastAll(pos - fwd * 2.6f, 1.1f, -fwd, 3f))
-                if (h.collider != null && !h.collider.isTrigger && h.transform != _car.transform) return true;
+                if (h.collider != null && !h.collider.isTrigger && h.transform != _car.transform && Overpass2D.SameLevel(h.collider, _car)) return true;
             return false;
         }
 
@@ -254,7 +254,7 @@ namespace GPA.TopDown2D
             if (WalkMap2D.Instance != null && WalkMap2D.Instance.Walkable(WalkMap2D.Instance.CellOf(lane + fwd * 6f))) return false;
             var hits = Physics2D.BoxCastAll(lane - fwd * 4f, new Vector2(2.0f, 2f), Vector2.SignedAngle(Vector2.up, fwd), fwd, 26f);
             foreach (var h in hits)
-                if (h.collider != null && !h.collider.isTrigger && h.transform != _car.transform) return false;
+                if (h.collider != null && !h.collider.isTrigger && h.transform != _car.transform && Overpass2D.SameLevel(h.collider, _car)) return false;
             return true;
         }
 
@@ -267,6 +267,7 @@ namespace GPA.TopDown2D
             {
                 Rigidbody2D body = hit.rigidbody;
                 if (body == null || body.transform == _car.transform || hit.collider.isTrigger || body == ignore) continue;
+                if (!Overpass2D.SameLevel(hit.collider, _car)) continue;   // on the bridge above, or the road below
                 if (_passBlend < 0.5f) _blocker = body;
                 return hit.distance;
             }

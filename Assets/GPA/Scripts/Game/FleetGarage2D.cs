@@ -30,7 +30,7 @@ namespace GPA.Game
         private float _navRepeat;
         private readonly List<VehicleSpec> _fleet = new List<VehicleSpec>();
         private string _message;
-        private GUIStyle _title, _row1, _row2, _small, _locked;
+        private GUIStyle _title, _row1, _row2, _small, _locked, _tag;
         private Texture2D _dim, _panel, _accent, _hl;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -92,12 +92,24 @@ namespace GPA.Game
             sr.color = new Color(0.15f, 0.35f, 0.85f, 0.85f);
             go.transform.localScale = new Vector3(1.6f, 1.6f, 1f);
             Sorting2D.Apply(sr, Sorting2D.Props, 30);
-            var inner = new GameObject("Garage Marker P");
-            inner.transform.SetParent(go.transform, false);
-            inner.transform.localScale = new Vector3(0.35f, 0.6f, 1f);
-            var p = inner.AddComponent<SpriteRenderer>();
-            p.sprite = BuildingInterior2D.Pixel; p.color = Color.white;
-            Sorting2D.Apply(p, Sorting2D.Props, 31);
+            // A white "P" (parking) built from four strokes: stem, top, middle and the bowl's right side.
+            var strokes = new (Vector2 pos, Vector2 size)[]
+            {
+                (new Vector2(-0.12f, 0f), new Vector2(0.1f, 0.6f)),
+                (new Vector2(0.0f, 0.25f), new Vector2(0.34f, 0.1f)),
+                (new Vector2(0.0f, 0.0f), new Vector2(0.34f, 0.1f)),
+                (new Vector2(0.12f, 0.125f), new Vector2(0.1f, 0.35f)),
+            };
+            foreach (var (pos, size) in strokes)
+            {
+                var stroke = new GameObject("Garage Marker P");
+                stroke.transform.SetParent(go.transform, false);
+                stroke.transform.localPosition = pos;
+                stroke.transform.localScale = new Vector3(size.x, size.y, 1f);
+                var p = stroke.AddComponent<SpriteRenderer>();
+                p.sprite = BuildingInterior2D.Pixel; p.color = Color.white;
+                Sorting2D.Apply(p, Sorting2D.Props, 31);
+            }
             var use = go.AddComponent<Interactable2D>();
             use.Prompt = "Vehicle garage — sign out a fleet vehicle";
             use.Range = 2.6f;
@@ -228,7 +240,7 @@ namespace GPA.Game
             GUI.depth = -150;
             Matrix4x4 old = UiScale.Begin(out Vector2 c);
             GUI.DrawTexture(new Rect(0, 0, c.x, c.y), _dim);
-            float rowH = 50f, pw = 820f, ph = 150f + _fleet.Count * rowH + 70f;
+            float rowH = 58f, pw = 820f, ph = 150f + _fleet.Count * rowH + 70f;
             ph = Mathf.Min(ph, c.y - 20f);
             var panel = new Rect(c.x * 0.5f - pw * 0.5f, c.y * 0.5f - ph * 0.5f, pw, ph);
             GUI.DrawTexture(panel, _panel);
@@ -257,19 +269,27 @@ namespace GPA.Game
                 if (GUI.Button(r, GUIContent.none, GUIStyle.none)) { if (_row == i) Choose(s); _row = i; }
                 if (s.Sprites.Length > 0 && s.Sprites[0] != null)
                 {
-                    Texture tex = s.Sprites[0].texture;
-                    float iw = 22f, ih = Mathf.Min(r.height - 6, iw * tex.height / Mathf.Max(1f, tex.width));
+                    // The sprites are packed in an atlas: draw just this sprite's part of the texture.
+                    Sprite sp = s.Sprites[0];
+                    Texture tex = sp.texture;
+                    Rect tr = sp.textureRect;
+                    var uv = new Rect(tr.x / tex.width, tr.y / tex.height, tr.width / tex.width, tr.height / tex.height);
+                    float boxW = 26f, boxH = r.height - 8f;
+                    float k = Mathf.Min(boxW / Mathf.Max(1f, tr.width), boxH / Mathf.Max(1f, tr.height));
+                    float iw = tr.width * k, ih = tr.height * k;
                     GUI.color = locked ? new Color(1, 1, 1, 0.35f) : Color.white;
-                    GUI.DrawTexture(new Rect(r.x + 14, r.y + (r.height - ih) * 0.5f, iw, ih), tex, ScaleMode.ScaleToFit);
+                    GUI.DrawTextureWithTexCoords(new Rect(r.x + 14 + (boxW - iw) * 0.5f, r.y + (r.height - ih) * 0.5f, iw, ih), tex, uv);
                     GUI.color = Color.white;
                 }
-                string label = s.DisplayName + (s.Id == CurrentId ? "   (signed out)" : "");
-                GUI.Label(new Rect(r.x + 50, r.y, 300, r.height), label, locked ? _locked : (i == _row ? _row1 : _row2));
+                bool signedOut = s.Id == CurrentId;
+                GUI.Label(new Rect(r.x + 50, r.y + (signedOut ? -8f : 0f), 290, r.height), s.DisplayName, locked ? _locked : (i == _row ? _row1 : _row2));
+                if (signedOut) GUI.Label(new Rect(r.x + 50, r.y + r.height - 24f, 290, 20), "signed out", _tag);
                 GUI.Label(new Rect(r.x + 350, r.y, r.width - 360, r.height),
-                    locked ? $"Locked · level {s.RequiredLevel} · {ReputationLevels.Ranks[Mathf.Clamp(s.RequiredLevel - 1, 0, 5)]}" : s.Blurb, locked ? _locked : _small);
+                    locked ? $"Locked · level {s.RequiredLevel} · {ReputationLevels.Ranks[Mathf.Clamp(s.RequiredLevel - 1, 0, 5)]}"
+                           : $"{s.Blurb}\nSpeed {s.SpeedRating} · Accel {s.AccelRating} · Handling {s.HandlingRating} · Brakes {s.BrakeRating}", locked ? _locked : _small);
             }
             string help = _message ?? (Gamepad.current != null ? "A sign out   B close" : "↑ ↓ choose   Enter sign out   Esc close   (or click twice)");
-            GUI.Label(new Rect(panel.x, panel.yMax - 44, pw, 30), help, _small);
+            GUI.Label(new Rect(panel.x + 28, panel.yMax - 44, pw - 56, 30), help, _small);
             GUI.matrix = old;
         }
 
@@ -284,6 +304,7 @@ namespace GPA.Game
             _row2 = new GUIStyle(_row1) { fontStyle = FontStyle.Normal, normal = { textColor = new Color(0.86f, 0.88f, 0.92f) } };
             _locked = new GUIStyle(_row2) { fontSize = 17, normal = { textColor = new Color(0.55f, 0.57f, 0.62f) } };
             _small = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.MiddleLeft, wordWrap = true, normal = { textColor = new Color(0.72f, 0.76f, 0.82f) } };
+            _tag = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.45f, 0.75f, 1f) } };
         }
     }
 }

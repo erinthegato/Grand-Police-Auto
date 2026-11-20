@@ -45,7 +45,7 @@ namespace GPA.Game
         private float _noticeUntil;
         private Officer2D _officer;
         private List<Row> _rows = new List<Row>();
-        private GUIStyle _title, _small, _row, _rowSel, _value, _off, _glyph, _appLabel, _clock;
+        private GUIStyle _title, _small, _row, _rowSel, _value, _off, _glyph, _appLabel, _clock, _help;
         private string _lastSave;
 
         // Taxi
@@ -389,8 +389,19 @@ namespace GPA.Game
             GUI.DrawTexture(body, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, new Color(0.07f, 0.07f, 0.09f, 0.98f), 0, 34f);
             var screen = new Rect(body.x + 12, body.y + 14, w - 24, h - 28);
             GUI.DrawTexture(screen, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, _app != null ? new Color(0.1f, 0.11f, 0.15f) : new Color(0.13f, 0.17f, 0.3f), 0, 26f);
-            if (_app == null)   // wallpaper glow
-                GUI.DrawTexture(new Rect(screen.x, screen.y + screen.height * 0.45f, screen.width, screen.height * 0.55f), Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, new Color(0.35f, 0.2f, 0.45f, 0.35f), 0, 26f);
+            if (_app == null)   // wallpaper glow: a soft gradient into the bottom of the screen (no hard edge)
+            {
+                const int bands = 16;
+                float top = screen.y + screen.height * 0.4f, bandH = screen.height * 0.6f / bands;
+                for (int i = 0; i < bands; i++)
+                {
+                    float a = 0.38f * Mathf.Pow((i + 1f) / bands, 1.6f);
+                    bool last = i == bands - 1;
+                    var band = new Rect(screen.x, top + i * bandH, screen.width, last ? screen.yMax - (top + i * bandH) : bandH + 0.5f);
+                    GUI.DrawTexture(band, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, new Color(0.35f, 0.2f, 0.45f, a),
+                        Vector4.zero, last ? new Vector4(0f, 0f, 26f, 26f) : Vector4.zero);
+                }
+            }
             GUI.DrawTexture(new Rect(screen.center.x - 40, screen.y + 8, 80, 20), Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, Color.black, 0, 10f);   // notch
 
             // Status bar
@@ -402,7 +413,7 @@ namespace GPA.Game
 
             string help = _notice != null && Time.unscaledTime < _noticeUntil ? _notice
                 : Gamepad.current != null ? "A open   B back   RB close" : "Arrows choose · Enter open · Backspace back";
-            GUI.Label(new Rect(screen.x + 10, screen.yMax - 44, screen.width - 20, 36), help, _small);
+            GUI.Label(new Rect(screen.x + 10, screen.yMax - 40, screen.width - 20, 32), help, _help);
             GUI.matrix = old;
         }
 
@@ -411,11 +422,11 @@ namespace GPA.Game
             GUI.Label(new Rect(screen.x, screen.y + 50, screen.width, 60), Services.TryGet(out ITimeOfDay clock) ? $"{Mathf.FloorToInt(clock.Hour):00}:{Mathf.FloorToInt(clock.Hour % 1f * 60f):00}" : "", _clock);
             GUI.Label(new Rect(screen.x, screen.y + 108, screen.width, 24), _cab == Cab.Coming ? "Cab on the way" : _cab == Cab.Waiting ? "Your cab is outside" : "Off duty", _small);
             const int cols = 2;
-            float tile = 96f, gapX = (screen.width - cols * tile) / (cols + 1), top = screen.y + 160f;
+            float tile = 86f, gapX = (screen.width - cols * tile) / (cols + 1), top = screen.y + 150f;
             for (int i = 0; i < _apps.Count; i++)
             {
                 int cx = i % cols, cy = i / cols;
-                var r = new Rect(screen.x + gapX + cx * (tile + gapX), top + cy * (tile + 40f), tile, tile);
+                var r = new Rect(screen.x + gapX + cx * (tile + gapX), top + cy * (tile + 36f), tile, tile);   // leaves room for the help line
                 bool sel = i == _sel;
                 if (sel) GUI.DrawTexture(new Rect(r.x - 5, r.y - 5, r.width + 10, r.height + 10), Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, new Color(1, 1, 1, 0.85f), 0, 26f);
                 GUI.DrawTexture(r, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, _apps[i].Colour, 0, 22f);
@@ -460,6 +471,7 @@ namespace GPA.Game
             _glyph = new GUIStyle(GUI.skin.label) { fontSize = 24, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(0.08f, 0.08f, 0.1f) } };
             _appLabel = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
             _clock = new GUIStyle(GUI.skin.label) { fontSize = 54, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
+            _help = new GUIStyle(_small) { fontSize = 12, normal = { textColor = new Color(0.7f, 0.74f, 0.82f) } };
         }
     }
 }
