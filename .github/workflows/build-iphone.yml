@@ -6,13 +6,39 @@ name: Build iPhone
 
 on:
   workflow_dispatch:
+    inputs:
+      xcode_from_run:
+        description: "Optional: run ID to reuse the Xcode project from (skips the ~25 min Unity step)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   export:
     name: Unity -> Xcode project
+    if: ${{ inputs.xcode_from_run == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
+      # Stops straight away with a clear message if the Unity login secrets haven't been added yet.
+      - name: Check Unity secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$UNITY_LICENSE" ] && missing="$missing UNITY_LICENSE"
+          [ -z "$UNITY_EMAIL" ] && missing="$missing UNITY_EMAIL"
+          [ -z "$UNITY_PASSWORD" ] && missing="$missing UNITY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. Add them under Settings -> Secrets and variables -> Actions (see BUILD-IPHONE.md)."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
           lfs: true
@@ -37,10 +63,14 @@ jobs:
           targetPlatform: iOS
           buildMethod: GPA.EditorTools.IOSBuild.CloudExport
           allowDirtyBuild: true
+          # The game's version number comes from Player Settings, not from git tags.
+          versioning: None
 
       # tar keeps the Xcode project's executable scripts intact between jobs.
       - name: Pack Xcode project
-        run: sudo tar -czf xcode.tgz -C Builds/iOS .
+        run: |
+          if [ ! -d Builds/iOS/Unity-iPhone.xcodeproj ]; then echo "::error::Unity didn't produce an Xcode project - open the 'Unity -> Xcode project' step log above for the error."; exit 1; fi
+          sudo tar -czf xcode.tgz -C Builds/iOS .
 
       - uses: actions/upload-artifact@v4
         with:
@@ -51,12 +81,15 @@ jobs:
   ipa:
     name: Xcode -> unsigned .ipa
     needs: export
+    if: ${{ always() && (needs.export.result == 'success' || inputs.xcode_from_run != '') }}
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: xcode-project
+          run-id: ${{ inputs.xcode_from_run || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Unpack
         run: mkdir xcode && tar -xzf xcode.tgz -C xcode
@@ -64,15 +97,60 @@ jobs:
       - name: Build (no code signing)
         working-directory: xcode
         run: |
+          set -o pipefail
           xcodebuild -project Unity-iPhone.xcodeproj -scheme Unity-iPhone -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' -archivePath "$PWD/out/GPA.xcarchive" archive \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" | tail -n 60
 
-      - name: Package .ipa
+      - name: Copy app out of the archive
         working-directory: xcode
         run: |
           mkdir -p Payload
           cp -R out/GPA.xcarchive/Products/Applications/*.app Payload/
+
+      # Sideloadly re-signs every part of the app with your Apple ID. Prebuilt frameworks (Unity 6.6's
+      # UnityRuntime.framework) can carry things an iPhone refuses to install: simulator (x86_64)
+      # slices, a leftover signature from Unity, header folders, or a static library posing as a
+      # framework. This cleans each one so the iPhone can verify it, then ad-hoc signs the app.
+      - name: Inspect and clean frameworks
+        working-directory: xcode
+        run: |
+          APP=$(ls -d Payload/*.app)
+          echo "App: $APP"
+          for fw in "$APP"/Frameworks/*.framework; do
+            [ -d "$fw" ] || continue
+            name=$(basename "$fw" .framework)
+            exe=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$fw/Info.plist" 2>/dev/null || echo "$name")
+            bin="$fw/$exe"
+            echo "::group::$name (before)"
+            ls -la "$fw"
+            file "$bin" || true
+            lipo -info "$bin" || true
+            codesign -dvv "$fw" 2>&1 | head -12 || true
+            plutil -p "$fw/Info.plist" || echo "NO Info.plist"
+            echo "::endgroup::"
+            if file "$bin" | grep -q "ar archive"; then
+              echo "::warning::$name is a static library, not an embeddable framework - removing it from Frameworks (it is already linked into the app)"
+              rm -rf "$fw"; continue
+            fi
+            if [ "$(lipo -archs "$bin")" != "arm64" ]; then
+              echo "Thinning $name to arm64 (was: $(lipo -archs "$bin"))"
+              lipo "$bin" -thin arm64 -output "$bin.arm64" && mv "$bin.arm64" "$bin"
+            fi
+            rm -rf "$fw/_CodeSignature" "$fw/Headers" "$fw/PrivateHeaders" "$fw/Modules"
+            if ! /usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$fw/Info.plist" >/dev/null 2>&1; then
+              /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string 15.0" "$fw/Info.plist" || true
+            fi
+            codesign --force --sign - --timestamp=none "$fw"
+            echo "::group::$name (after)"; ls -la "$fw"; lipo -info "$bin"; codesign -dvv "$fw" 2>&1 | head -6; echo "::endgroup::"
+          done
+          find "$APP" -name "*.dylib" -exec codesign --force --sign - --timestamp=none {} \;
+          codesign --force --sign - --timestamp=none "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Package .ipa
+        working-directory: xcode
+        run: |
           zip -qry ../GrandPoliceAuto.ipa Payload
           ls -lh ../GrandPoliceAuto.ipa
 
