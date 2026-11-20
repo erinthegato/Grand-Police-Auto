@@ -13,6 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
+      # Stops straight away with a clear message if the Unity login secrets haven't been added yet.
+      - name: Check Unity secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$UNITY_LICENSE" ] && missing="$missing UNITY_LICENSE"
+          [ -z "$UNITY_EMAIL" ] && missing="$missing UNITY_EMAIL"
+          [ -z "$UNITY_PASSWORD" ] && missing="$missing UNITY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. Add them under Settings -> Secrets and variables -> Actions (see BUILD-IPHONE.md)."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
           lfs: true
@@ -37,10 +53,14 @@ jobs:
           targetPlatform: iOS
           buildMethod: GPA.EditorTools.IOSBuild.CloudExport
           allowDirtyBuild: true
+          # The game's version number comes from Player Settings, not from git tags.
+          versioning: None
 
       # tar keeps the Xcode project's executable scripts intact between jobs.
       - name: Pack Xcode project
-        run: sudo tar -czf xcode.tgz -C Builds/iOS .
+        run: |
+          if [ ! -d Builds/iOS/Unity-iPhone.xcodeproj ]; then echo "::error::Unity didn't produce an Xcode project - open the 'Unity -> Xcode project' step log above for the error."; exit 1; fi
+          sudo tar -czf xcode.tgz -C Builds/iOS .
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,6 +84,7 @@ jobs:
       - name: Build (no code signing)
         working-directory: xcode
         run: |
+          set -o pipefail
           xcodebuild -project Unity-iPhone.xcodeproj -scheme Unity-iPhone -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' -archivePath "$PWD/out/GPA.xcarchive" archive \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" | tail -n 60
